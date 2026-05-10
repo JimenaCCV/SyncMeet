@@ -14,6 +14,10 @@ const notificacionesRoutes = require('./routes/notificaciones.routes');
 
 const app = express();
 
+// Necesario para que express-rate-limit y otros middlewares funcionen
+// correctamente detrás del reverse proxy de Railway/Render
+app.set('trust proxy', 1);
+
 const allowedOrigins = new Set(
   [
     FRONTEND_URL,
