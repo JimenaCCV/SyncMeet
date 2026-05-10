@@ -1,5 +1,6 @@
 const express = require('express');
 const cors = require('cors');
+const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const mongoose = require('mongoose');
 const errorHandler = require('./middlewares/errorHandler');
@@ -14,9 +15,19 @@ const notificacionesRoutes = require('./routes/notificaciones.routes');
 
 const app = express();
 
-// Necesario para que express-rate-limit y otros middlewares funcionen
-// correctamente detrás del reverse proxy de Railway/Render
+// Requerido detrás del reverse proxy de Railway/Render
 app.set('trust proxy', 1);
+
+// Health check antes de cualquier middleware para que Railway
+// pueda verificar que el servidor está vivo sin interferencia
+app.get('/health', (req, res) => {
+  res.json({
+    ok: true,
+    db: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
+    uptime: Math.floor(process.uptime()),
+    timestamp: new Date().toISOString(),
+  });
+});
 
 const allowedOrigins = new Set(
   [
@@ -39,12 +50,10 @@ app.use(cors({
 
 app.use(express.json({ limit: '20kb' }));
 
-const helmet = require('helmet');
 app.use(helmet({
   crossOriginResourcePolicy: { policy: 'cross-origin' },
 }));
 
-// Rate limit estricto para autenticación (10 intentos / 15 min por IP)
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 10,
@@ -53,7 +62,6 @@ const authLimiter = rateLimit({
   message: { success: false, error: 'Demasiados intentos. Espera 15 minutos.', code: 'RATE_LIMIT' },
 });
 
-// Rate limit general para endpoints de escritura (60 req / 15 min por IP)
 const writeLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 60,
@@ -64,19 +72,7 @@ const writeLimiter = rateLimit({
 
 app.use('/api/auth/login', authLimiter);
 app.use('/api/auth/registro', authLimiter);
-
-// Proteger endpoints de escritura más expuestos
 app.use('/api/reuniones', writeLimiter);
-
-// Health check — no requiere auth, útil para monitoreo
-app.get('/health', (req, res) => {
-  res.json({
-    ok: true,
-    db: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
-    uptime: Math.floor(process.uptime()),
-    timestamp: new Date().toISOString(),
-  });
-});
 
 app.use('/api/auth', authRoutes);
 app.use('/api/reuniones', reunionesRoutes);
