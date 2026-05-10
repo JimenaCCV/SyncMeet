@@ -1,6 +1,5 @@
 {
   "rewrites": [
-    { "source": "/", "destination": "/Frontend/syncmeet.html" },
-    { "source": "/:path*", "destination": "/Frontend/:path*" }
+    { "source": "/(.*)", "destination": "/Frontend/$1" }
   ]
 }
