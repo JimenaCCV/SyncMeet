@@ -1,12 +1,11 @@
-const Notificacion = require('../models/Notificacion');
+const notificacionRepo = require('../repositories/notificacion.repository');
 
-const crearNotificacion = async ({ usuarioId, tipo, mensaje, reunionId = null }) => {
-  return await Notificacion.create({ usuarioId, tipo, mensaje, reunionId });
-};
+const crearNotificacion = ({ usuarioId, tipo, mensaje, reunionId = null }) =>
+  notificacionRepo.create({ usuarioId, tipo, mensaje, reunionId });
 
-const notificarParticipantes = async (participantesIds, tipo, mensaje, reunionId = null) => {
+const notificarParticipantes = (participantesIds, tipo, mensaje, reunionId = null) => {
   const docs = participantesIds.map(id => ({ usuarioId: id, tipo, mensaje, reunionId }));
-  await Notificacion.insertMany(docs, { ordered: false });
+  return notificacionRepo.insertMany(docs);
 };
 
 module.exports = { crearNotificacion, notificarParticipantes };

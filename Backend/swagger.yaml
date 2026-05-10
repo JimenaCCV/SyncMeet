@@ -1,0 +1,1478 @@
+openapi: 3.0.3
+info:
+  title: SyncMeet API
+  description: |
+    API REST para **SyncMeet**, una plataforma de coordinación de reuniones por disponibilidad.
+
+    ## Autenticación
+    Todos los endpoints (excepto `/auth/registro`, `/auth/login` y `/health`) requieren un JWT en la cabecera:
+    ```
+    Authorization: Bearer <token>
+    ```
+    El token se obtiene al hacer POST a `/auth/login`.
+
+    ## Paginación
+    Los endpoints de listado aceptan los query params `page` (default: 1) y `limit` (default: 10 ó 20).
+    La respuesta incluye `total`, `page`, `limit` y `totalPages`.
+
+    ## Filtrado
+    - `GET /reuniones` acepta `?estado=` y `?titulo=`
+    - `GET /notificaciones` acepta `?leida=` y `?tipo=`
+  version: 1.0.0
+  contact:
+    name: Equipo SyncMeet
+
+servers:
+  - url: http://localhost:3000/api
+    description: Desarrollo local
+  - url: https://syncmeet-backend.onrender.com/api
+    description: Producción (Render)
+
+tags:
+  - name: Health
+    description: Estado del servidor
+  - name: Auth
+    description: Registro, login y sesión
+  - name: Reuniones
+    description: Gestión de reuniones
+  - name: Participantes
+    description: Gestión de participantes de una reunión
+  - name: Opciones de Horario
+    description: Opciones de fecha/hora propuestas para una reunión
+  - name: Disponibilidades
+    description: Respuestas de disponibilidad de los participantes
+  - name: Notificaciones
+    description: Notificaciones internas del usuario
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    # ── Respuestas genéricas ────────────────────────────────────────────────
+    ErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: string
+          example: "Mensaje de error"
+        code:
+          type: string
+          example: "VALIDATION_ERROR"
+
+    # ── Entidades ───────────────────────────────────────────────────────────
+    Usuario:
+      type: object
+      properties:
+        _id:
+          type: string
+          example: "664a1b2c3d4e5f6789012345"
+        nombre:
+          type: string
+          example: "Ana López"
+        email:
+          type: string
+          format: email
+          example: "ana@example.com"
+        fechaRegistro:
+          type: string
+          format: date-time
+
+    HistorialEstado:
+      type: object
+      description: Documento embebido que registra cada transición de estado de una reunión.
+      properties:
+        estado:
+          type: string
+          enum: [pendiente, confirmada, cancelada]
+        fecha:
+          type: string
+          format: date-time
+
+    Reunion:
+      type: object
+      properties:
+        _id:
+          type: string
+          example: "664a1b2c3d4e5f6789abcdef"
+        titulo:
+          type: string
+          example: "Reunión de planificación Q3"
+        descripcion:
+          type: string
+          example: "Revisión de objetivos del tercer trimestre."
+        organizadorId:
+          type: string
+          example: "664a1b2c3d4e5f6789012345"
+        estado:
+          type: string
+          enum: [pendiente, confirmada, cancelada]
+          example: pendiente
+        opcionConfirmadaId:
+          type: string
+          nullable: true
+          example: null
+        historialEstados:
+          type: array
+          description: Historial de cambios de estado (documento embebido).
+          items:
+            $ref: '#/components/schemas/HistorialEstado'
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    ReunionConRol:
+      allOf:
+        - $ref: '#/components/schemas/Reunion'
+        - type: object
+          properties:
+            miRol:
+              type: string
+              enum: [organizador, participante]
+            miEstado:
+              type: string
+              enum: [pendiente, aceptado, rechazado]
+
+    OpcionHorario:
+      type: object
+      properties:
+        _id:
+          type: string
+          example: "664a1b2c3d4e5f6789fedcba"
+        reunionId:
+          type: string
+          example: "664a1b2c3d4e5f6789abcdef"
+        fechaHora:
+          type: string
+          format: date-time
+          example: "2026-07-15T10:00:00.000Z"
+        createdAt:
+          type: string
+          format: date-time
+
+    ParticipanteReunion:
+      type: object
+      properties:
+        _id:
+          type: string
+        reunionId:
+          type: string
+        usuarioId:
+          oneOf:
+            - type: string
+            - $ref: '#/components/schemas/Usuario'
+        rol:
+          type: string
+          enum: [organizador, participante]
+        estado:
+          type: string
+          enum: [pendiente, aceptado, rechazado]
+        createdAt:
+          type: string
+          format: date-time
+
+    Disponibilidad:
+      type: object
+      properties:
+        _id:
+          type: string
+        reunionId:
+          type: string
+        participanteId:
+          oneOf:
+            - type: string
+            - $ref: '#/components/schemas/Usuario'
+        opcionHorarioId:
+          oneOf:
+            - type: string
+            - $ref: '#/components/schemas/OpcionHorario'
+        disponible:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+
+    Notificacion:
+      type: object
+      properties:
+        _id:
+          type: string
+        usuarioId:
+          type: string
+        reunionId:
+          type: string
+          nullable: true
+        tipo:
+          type: string
+          enum: [invitacion, confirmacion, cancelacion, recordatorio]
+        mensaje:
+          type: string
+        leida:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+
+    Coincidencia:
+      type: object
+      properties:
+        opcion:
+          type: object
+          properties:
+            _id:
+              type: string
+            fechaHora:
+              type: string
+              format: date-time
+        cantidad:
+          type: integer
+          description: Participantes que marcaron disponible=true
+        totalRespondieron:
+          type: integer
+        totalParticipantes:
+          type: integer
+        pendientes:
+          type: array
+          items:
+            type: object
+            properties:
+              _id:
+                type: string
+              nombre:
+                type: string
+
+    # ── Respuestas paginadas ────────────────────────────────────────────────
+    PaginatedReuniones:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            reuniones:
+              type: array
+              items:
+                $ref: '#/components/schemas/ReunionConRol'
+            total:
+              type: integer
+            page:
+              type: integer
+            limit:
+              type: integer
+            totalPages:
+              type: integer
+
+    PaginatedParticipantes:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            docs:
+              type: array
+              items:
+                $ref: '#/components/schemas/ParticipanteReunion'
+            total:
+              type: integer
+            page:
+              type: integer
+            limit:
+              type: integer
+            totalPages:
+              type: integer
+
+    PaginatedNotificaciones:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            docs:
+              type: array
+              items:
+                $ref: '#/components/schemas/Notificacion'
+            total:
+              type: integer
+            page:
+              type: integer
+            limit:
+              type: integer
+            totalPages:
+              type: integer
+
+# ── Paths ────────────────────────────────────────────────────────────────────
+paths:
+
+  # ── Health ──────────────────────────────────────────────────────────────
+  /health:
+    get:
+      tags: [Health]
+      summary: Estado del servidor
+      description: Verifica que el servidor y MongoDB estén operativos. No requiere autenticación.
+      responses:
+        '200':
+          description: Servidor y base de datos operativos
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    example: true
+                  db:
+                    type: string
+                    example: connected
+                  uptime:
+                    type: integer
+                    example: 3600
+                  timestamp:
+                    type: string
+                    format: date-time
+
+  # ── Auth ────────────────────────────────────────────────────────────────
+  /auth/registro:
+    post:
+      tags: [Auth]
+      summary: Registrar usuario
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [nombre, email, password]
+              properties:
+                nombre:
+                  type: string
+                  example: Ana López
+                email:
+                  type: string
+                  format: email
+                  example: ana@example.com
+                password:
+                  type: string
+                  minLength: 8
+                  maxLength: 128
+                  example: password123
+      responses:
+        '201':
+          description: Usuario creado exitosamente
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/Usuario'
+        '400':
+          description: Datos inválidos o contraseña fuera de rango
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: El email ya está registrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Iniciar sesión
+      description: Devuelve un JWT válido por el tiempo configurado en `JWT_EXPIRES_IN`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: ana@example.com
+                password:
+                  type: string
+                  example: password123
+      responses:
+        '200':
+          description: Login exitoso
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      token:
+                        type: string
+                        example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+                      usuario:
+                        $ref: '#/components/schemas/Usuario'
+        '400':
+          description: Campos faltantes o con formato inválido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Credenciales incorrectas
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /auth/perfil:
+    get:
+      tags: [Auth]
+      summary: Obtener perfil del usuario autenticado
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Perfil del usuario
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/Usuario'
+        '401':
+          description: Token no proporcionado o inválido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Usuario no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /auth/logout:
+    post:
+      tags: [Auth]
+      summary: Cerrar sesión
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Sesión cerrada
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      mensaje:
+                        type: string
+                        example: Sesión cerrada
+
+  # ── Reuniones ────────────────────────────────────────────────────────────
+  /reuniones:
+    post:
+      tags: [Reuniones]
+      summary: Crear reunión
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [titulo]
+              properties:
+                titulo:
+                  type: string
+                  example: Reunión de planificación Q3
+                descripcion:
+                  type: string
+                  example: Revisión de objetivos del tercer trimestre.
+      responses:
+        '201':
+          description: Reunión creada
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/Reunion'
+        '400':
+          description: Título vacío o faltante
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: No autenticado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    get:
+      tags: [Reuniones]
+      summary: Listar reuniones del usuario
+      description: Devuelve todas las reuniones en las que el usuario es organizador o participante. Soporta filtrado y paginación.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: estado
+          schema:
+            type: string
+            enum: [pendiente, confirmada, cancelada]
+          description: Filtrar por estado de la reunión
+        - in: query
+          name: titulo
+          schema:
+            type: string
+          description: Búsqueda parcial e insensible a mayúsculas en el título
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+          description: Número de página
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 10
+            maximum: 100
+          description: Resultados por página
+      responses:
+        '200':
+          description: Lista paginada de reuniones
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedReuniones'
+        '400':
+          description: Estado inválido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: No autenticado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /reuniones/{id}:
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+        description: ID de la reunión
+
+    get:
+      tags: [Reuniones]
+      summary: Obtener reunión por ID
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Detalle de la reunión
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/ReunionConRol'
+        '401':
+          description: No autenticado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: No eres participante de esta reunión
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Reunión no encontrada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    put:
+      tags: [Reuniones]
+      summary: Editar reunión
+      description: Solo el organizador puede editar. Solo disponible en estado `pendiente`.
+      security:
+        - bearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                titulo:
+                  type: string
+                  example: Nuevo título
+                descripcion:
+                  type: string
+                  example: Nueva descripción
+      responses:
+        '200':
+          description: Reunión actualizada
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/Reunion'
+        '400':
+          description: Título vacío o reunión no está en estado pendiente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Solo el organizador puede realizar esta acción
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Reunión no encontrada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    delete:
+      tags: [Reuniones]
+      summary: Eliminar reunión
+      description: Elimina la reunión y todos sus datos asociados (opciones, disponibilidades, participantes). Solo el organizador puede hacerlo.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Reunión eliminada
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      mensaje:
+                        type: string
+                        example: Reunión eliminada correctamente
+        '403':
+          description: Solo el organizador puede eliminar la reunión
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Reunión no encontrada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /reuniones/{id}/confirmar:
+    put:
+      tags: [Reuniones]
+      summary: Confirmar reunión
+      description: El organizador selecciona la opción de horario ganadora. La reunión pasa a estado `confirmada` y se notifica a todos los participantes.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [opcionId]
+              properties:
+                opcionId:
+                  type: string
+                  example: "664a1b2c3d4e5f6789fedcba"
+      responses:
+        '200':
+          description: Reunión confirmada
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/Reunion'
+        '400':
+          description: opcionId faltante, reunión no está pendiente, o no hay participantes suficientes
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Solo el organizador puede confirmar
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Reunión u opción no encontrada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /reuniones/{id}/cancelar:
+    put:
+      tags: [Reuniones]
+      summary: Cancelar reunión
+      description: Cancela la reunión y notifica a todos los participantes. Solo el organizador puede hacerlo.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Reunión cancelada
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/Reunion'
+        '400':
+          description: La reunión ya está cancelada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Solo el organizador puede cancelar
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /reuniones/{id}/recordar:
+    post:
+      tags: [Reuniones]
+      summary: Enviar recordatorio de disponibilidad
+      description: Notifica por correo e internamente a los participantes que aún no han respondido ninguna opción de horario.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Recordatorio enviado o mensaje indicando que todos respondieron
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      mensaje:
+                        type: string
+                        example: Recordatorio enviado a 2 participante(s) pendiente(s)
+        '400':
+          description: La reunión no está en estado pendiente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Solo el organizador puede enviar recordatorios
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # ── Participantes ────────────────────────────────────────────────────────
+  /reuniones/{reunionId}/participantes:
+    parameters:
+      - in: path
+        name: reunionId
+        required: true
+        schema:
+          type: string
+
+    post:
+      tags: [Participantes]
+      summary: Agregar participante
+      description: Agrega un usuario existente como participante. Solo el organizador puede hacerlo.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: participante@example.com
+      responses:
+        '201':
+          description: Participante agregado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/ParticipanteReunion'
+        '400':
+          description: Email inválido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Reunión o usuario no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: El usuario ya es participante
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    get:
+      tags: [Participantes]
+      summary: Listar participantes
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 20
+            maximum: 100
+      responses:
+        '200':
+          description: Lista paginada de participantes
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedParticipantes'
+
+  /reuniones/{reunionId}/participantes/{usuarioId}:
+    parameters:
+      - in: path
+        name: reunionId
+        required: true
+        schema:
+          type: string
+      - in: path
+        name: usuarioId
+        required: true
+        schema:
+          type: string
+
+    delete:
+      tags: [Participantes]
+      summary: Eliminar participante
+      description: No se puede eliminar al organizador. Solo el organizador puede hacerlo.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Participante eliminado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      mensaje:
+                        type: string
+                        example: Participante eliminado
+        '400':
+          description: No se puede eliminar al organizador
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Participante no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /reuniones/{reunionId}/participantes/{usuarioId}/reenviar-invitacion:
+    post:
+      tags: [Participantes]
+      summary: Reenviar invitación
+      description: Reenvía la notificación interna y el correo de invitación a un participante.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: reunionId
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: usuarioId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Invitación reenviada
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      mensaje:
+                        type: string
+                        example: Invitación reenviada correctamente
+
+  # ── Opciones de Horario ──────────────────────────────────────────────────
+  /reuniones/{reunionId}/opciones:
+    parameters:
+      - in: path
+        name: reunionId
+        required: true
+        schema:
+          type: string
+
+    post:
+      tags: [Opciones de Horario]
+      summary: Agregar opción de horario
+      description: La fecha debe ser al menos 1 hora en el futuro y no más de 1 año. Solo el organizador puede hacerlo.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [fechaHora]
+              properties:
+                fechaHora:
+                  type: string
+                  format: date-time
+                  example: "2026-07-15T10:00:00.000Z"
+      responses:
+        '201':
+          description: Opción creada
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/OpcionHorario'
+        '400':
+          description: Fecha inválida, fuera de rango, o reunión no está pendiente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Ya existe esa opción de horario en la reunión
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    get:
+      tags: [Opciones de Horario]
+      summary: Listar opciones de horario
+      description: Devuelve las opciones ordenadas por fecha ascendente.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Lista de opciones de horario
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/OpcionHorario'
+
+  /reuniones/{reunionId}/opciones/{opcionId}:
+    delete:
+      tags: [Opciones de Horario]
+      summary: Eliminar opción de horario
+      description: Elimina la opción y las disponibilidades asociadas. Notifica a los participantes afectados.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: reunionId
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: opcionId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Opción eliminada
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      mensaje:
+                        type: string
+                        example: Opción eliminada
+        '404':
+          description: Opción no encontrada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # ── Disponibilidades ─────────────────────────────────────────────────────
+  /reuniones/{reunionId}/disponibilidades:
+    parameters:
+      - in: path
+        name: reunionId
+        required: true
+        schema:
+          type: string
+
+    post:
+      tags: [Disponibilidades]
+      summary: Registrar disponibilidad
+      description: El participante indica si está disponible para una opción de horario.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [opcionHorarioId, disponible]
+              properties:
+                opcionHorarioId:
+                  type: string
+                  example: "664a1b2c3d4e5f6789fedcba"
+                disponible:
+                  type: boolean
+                  example: true
+      responses:
+        '201':
+          description: Disponibilidad registrada
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/Disponibilidad'
+        '404':
+          description: Opción de horario no pertenece a esta reunión
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Ya registraste disponibilidad para esta opción
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    get:
+      tags: [Disponibilidades]
+      summary: Listar disponibilidades
+      description: Devuelve todas las disponibilidades de la reunión con datos del participante y la opción.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Lista de disponibilidades
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Disponibilidad'
+
+  /reuniones/{reunionId}/disponibilidades/bulk:
+    put:
+      tags: [Disponibilidades]
+      summary: Registrar disponibilidad en bloque
+      description: Registra o actualiza la disponibilidad para múltiples opciones en una sola llamada (upsert).
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: reunionId
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [respuestas]
+              properties:
+                respuestas:
+                  type: array
+                  minItems: 1
+                  items:
+                    type: object
+                    required: [opcionHorarioId, disponible]
+                    properties:
+                      opcionHorarioId:
+                        type: string
+                      disponible:
+                        type: boolean
+              example:
+                respuestas:
+                  - opcionHorarioId: "664a1b2c3d4e5f6789fedcba"
+                    disponible: true
+                  - opcionHorarioId: "664a1b2c3d4e5f6789000001"
+                    disponible: false
+      responses:
+        '200':
+          description: Disponibilidades procesadas
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Disponibilidad'
+
+  /reuniones/{reunionId}/disponibilidades/{disponibilidadId}:
+    put:
+      tags: [Disponibilidades]
+      summary: Actualizar disponibilidad
+      description: El participante modifica una disponibilidad ya registrada.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: reunionId
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: disponibilidadId
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [disponible]
+              properties:
+                disponible:
+                  type: boolean
+                  example: false
+      responses:
+        '200':
+          description: Disponibilidad actualizada
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/Disponibilidad'
+        '404':
+          description: Disponibilidad no encontrada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /reuniones/{reunionId}/disponibilidades/coincidencias:
+    get:
+      tags: [Disponibilidades]
+      summary: Obtener coincidencias de disponibilidad
+      description: Devuelve las opciones ordenadas por número de participantes disponibles, junto con quiénes aún no han respondido.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: reunionId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Lista de coincidencias ordenada por popularidad
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Coincidencia'
+
+  # ── Notificaciones ───────────────────────────────────────────────────────
+  /notificaciones:
+    get:
+      tags: [Notificaciones]
+      summary: Listar notificaciones del usuario
+      description: Devuelve las notificaciones del usuario autenticado, ordenadas de más reciente a más antigua. Soporta filtrado y paginación.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: leida
+          schema:
+            type: boolean
+          description: Filtrar por estado de lectura (true | false)
+        - in: query
+          name: tipo
+          schema:
+            type: string
+            enum: [invitacion, confirmacion, cancelacion, recordatorio]
+          description: Filtrar por tipo de notificación
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 20
+            maximum: 100
+      responses:
+        '200':
+          description: Lista paginada de notificaciones
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedNotificaciones'
+        '400':
+          description: Tipo de notificación inválido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /notificaciones/leer-todas:
+    put:
+      tags: [Notificaciones]
+      summary: Marcar todas las notificaciones como leídas
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Todas las notificaciones marcadas como leídas
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      mensaje:
+                        type: string
+                        example: Todas las notificaciones marcadas como leídas
+
+  /notificaciones/{id}/leida:
+    put:
+      tags: [Notificaciones]
+      summary: Marcar notificación como leída
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+          description: ID de la notificación
+      responses:
+        '200':
+          description: Notificación marcada como leída
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/Notificacion'
+        '403':
+          description: La notificación no pertenece al usuario autenticado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Notificación no encontrada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'

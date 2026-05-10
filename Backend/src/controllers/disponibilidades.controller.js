@@ -1,5 +1,5 @@
-const Disponibilidad = require('../models/Disponibilidad');
-const OpcionHorario = require('../models/OpcionHorario');
+const disponibilidadRepo = require('../repositories/disponibilidad.repository');
+const opcionRepo = require('../repositories/opcion.repository');
 const { calcularCoincidencias } = require('../services/coincidencias.service');
 const { ok, err } = require('../utils/respuesta');
 
@@ -15,12 +15,12 @@ const registrarDisponibilidad = async (req, res, next) => {
       return res.status(400).json(err('disponible debe ser true o false', 'VALIDATION_ERROR'));
     }
 
-    const opcion = await OpcionHorario.findOne({ _id: opcionHorarioId, reunionId });
+    const opcion = await opcionRepo.findOne({ _id: opcionHorarioId, reunionId });
     if (!opcion) {
       return res.status(404).json(err('Opción de horario no pertenece a esta reunión', 'NOT_FOUND'));
     }
 
-    const disp = await Disponibilidad.create({
+    const disp = await disponibilidadRepo.create({
       reunionId,
       participanteId: req.usuarioId,
       opcionHorarioId,
@@ -48,7 +48,7 @@ const actualizarDisponibilidad = async (req, res, next) => {
       return res.status(400).json(err('disponible debe ser true o false', 'VALIDATION_ERROR'));
     }
 
-    const disp = await Disponibilidad.findOne({
+    const disp = await disponibilidadRepo.findOne({
       _id: disponibilidadId,
       reunionId,
       participanteId: req.usuarioId,
@@ -59,7 +59,7 @@ const actualizarDisponibilidad = async (req, res, next) => {
     }
 
     disp.disponible = disponible;
-    await disp.save();
+    await disponibilidadRepo.save(disp);
     res.json(ok(disp));
   } catch (error) {
     next(error);
@@ -67,7 +67,6 @@ const actualizarDisponibilidad = async (req, res, next) => {
 };
 
 // Upsert en bloque: recibe { respuestas: [{ opcionHorarioId, disponible }] }
-// Evita N requests desde el frontend, responde en una sola llamada.
 const registrarDisponibilidadBulk = async (req, res, next) => {
   try {
     const { respuestas } = req.body;
@@ -88,10 +87,10 @@ const registrarDisponibilidadBulk = async (req, res, next) => {
 
     const results = [];
     for (const { opcionHorarioId, disponible } of respuestas) {
-      const opcion = await OpcionHorario.findOne({ _id: opcionHorarioId, reunionId });
-      if (!opcion) continue; // omite opciones que no pertenecen a esta reunión
+      const opcion = await opcionRepo.findOne({ _id: opcionHorarioId, reunionId });
+      if (!opcion) continue;
 
-      let disp = await Disponibilidad.findOne({
+      let disp = await disponibilidadRepo.findOne({
         reunionId,
         participanteId: req.usuarioId,
         opcionHorarioId,
@@ -99,9 +98,9 @@ const registrarDisponibilidadBulk = async (req, res, next) => {
 
       if (disp) {
         disp.disponible = disponible;
-        await disp.save();
+        await disponibilidadRepo.save(disp);
       } else {
-        disp = await Disponibilidad.create({
+        disp = await disponibilidadRepo.create({
           reunionId,
           participanteId: req.usuarioId,
           opcionHorarioId,
@@ -119,9 +118,13 @@ const registrarDisponibilidadBulk = async (req, res, next) => {
 
 const obtenerDisponibilidades = async (req, res, next) => {
   try {
-    const disponibilidades = await Disponibilidad.find({ reunionId: req.params.reunionId })
-      .populate('participanteId', '-password')
-      .populate('opcionHorarioId');
+    const disponibilidades = await disponibilidadRepo.findWithPopulate(
+      { reunionId: req.params.reunionId },
+      [
+        { path: 'participanteId', select: '-password' },
+        { path: 'opcionHorarioId' },
+      ],
+    );
     res.json(ok(disponibilidades));
   } catch (error) {
     next(error);

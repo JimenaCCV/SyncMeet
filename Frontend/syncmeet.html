@@ -323,6 +323,19 @@
   </div>
 </div>
 
+<!-- MODAL: Eliminar reunión -->
+<div class="modal-overlay" id="modal-delete" onclick="closeModal('delete')">
+  <div class="card p-4" style="max-width:420px;width:90%" onclick="event.stopPropagation()">
+    <h5 class="fw-bold mb-2"><i class="bi bi-trash text-danger me-2"></i>Eliminar reunión</h5>
+    <p class="text-muted small mb-1">¿Seguro que quieres eliminar <strong id="modal-delete-title">esta reunión</strong>?</p>
+    <p class="text-muted small mb-3"><strong>Esta acción no se puede deshacer.</strong></p>
+    <div class="d-flex justify-content-end gap-2">
+      <button class="btn btn-outline-secondary btn-sm" onclick="closeModal('delete')">No, regresar</button>
+      <button class="btn btn-danger btn-sm" id="btn-do-delete" onclick="confirmDelete()">Sí, eliminar reunión</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast-box" id="toastBox"></div>
 
 <script>
@@ -562,7 +575,7 @@ async function loadDashboard() {
   const list = document.getElementById('meetings-list');
   list.innerHTML = '<div class="text-muted small"><span class="spinner-border spinner-border-sm me-2"></span>Cargando reuniones...</div>';
   try {
-    allMeetings = await apiFetch('/reuniones');
+    allMeetings = (await apiFetch('/reuniones')).reuniones || [];
     updateGreetings();
     filterMeetings(currentFilter);
   } catch (e) {
@@ -623,6 +636,10 @@ function renderMeetings(reuniones) {
       ? `openMeetingOrg('${r._id}')`
       : `openMeetingPart('${r._id}')`;
 
+    const deleteBtn = r.miRol === 'organizador'
+      ? `<button class="btn btn-sm btn-outline-danger" onclick="event.stopPropagation(); deleteReunion('${r._id}', '${escHtml(r.titulo).replace(/'/g, "\\'")}')"><i class="bi bi-trash"></i></button>`
+      : '';
+
     return `
       <div class="meeting-row" onclick="${onclick}">
         <div class="d-flex justify-content-between align-items-center gap-2">
@@ -633,7 +650,10 @@ function renderMeetings(reuniones) {
             </div>
             <div class="text-muted" style="font-size:13px">${escHtml(statusText)}</div>
           </div>
-          <span class="badge ${badgeFor(r.estado)} flex-shrink-0">${r.estado.charAt(0).toUpperCase() + r.estado.slice(1)}</span>
+          <div class="d-flex gap-1 align-items-center flex-shrink-0">
+            <span class="badge ${badgeFor(r.estado)}">${r.estado.charAt(0).toUpperCase() + r.estado.slice(1)}</span>
+            ${deleteBtn}
+          </div>
         </div>
       </div>`;
   }).join('');
@@ -1012,6 +1032,34 @@ async function recordarPendientes() {
   }
 }
 
+// ── eliminar reunión ──────────────────────────────────────────────────────
+
+function deleteReunion(reunionId, titulo) {
+  currentMeetingId = reunionId;
+  currentMeetingTitle = titulo;
+  openDeleteModal();
+}
+
+function openDeleteModal() {
+  document.getElementById('modal-delete-title').textContent = currentMeetingTitle || 'esta reunión';
+  openModal('delete');
+}
+
+async function confirmDelete() {
+  const btn = document.getElementById('btn-do-delete');
+  closeModal('delete');
+  setLoading(btn, true);
+  try {
+    await apiFetch(`/reuniones/${currentMeetingId}`, { method: 'DELETE' });
+    showToast('Reunión eliminada correctamente.', 'success');
+    setTimeout(() => goTo('dashboard'), 600);
+  } catch (e) {
+    if (e.status !== 401) showToast(e.message, 'danger');
+  } finally {
+    setLoading(btn, false);
+  }
+}
+
 // ── notificaciones ────────────────────────────────────────────────────────
 
 const iconoNotif = {
@@ -1024,7 +1072,7 @@ const iconoNotif = {
 async function loadNotifications() {
   if (!currentUser) return;
   try {
-    const notifs = await apiFetch('/notificaciones');
+    const notifs = (await apiFetch('/notificaciones')).docs || [];
     const unread = notifs.filter(n => !n.leida).length;
     const badge = document.getElementById('notif-badge');
     badge.textContent = unread;

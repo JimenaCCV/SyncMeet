@@ -1,10 +1,12 @@
-const Reunion = require('../models/Reunion');
-const ParticipanteReunion = require('../models/ParticipanteReunion');
-const OpcionHorario = require('../models/OpcionHorario');
-const Disponibilidad = require('../models/Disponibilidad');
+const reunionRepo = require('../repositories/reunion.repository');
+const participanteRepo = require('../repositories/participante.repository');
+const opcionRepo = require('../repositories/opcion.repository');
+const disponibilidadRepo = require('../repositories/disponibilidad.repository');
 const { crearNotificacion, notificarParticipantes } = require('../services/notificacion.service');
 const { enviarConfirmacion, enviarCancelacion, enviarRecordatorio } = require('../services/correo.service');
 const { ok, err } = require('../utils/respuesta');
+
+const ESTADOS_VALIDOS = ['pendiente', 'confirmada', 'cancelada'];
 
 const crearReunion = async (req, res, next) => {
   try {
@@ -13,13 +15,13 @@ const crearReunion = async (req, res, next) => {
       return res.status(400).json(err('El título es obligatorio', 'VALIDATION_ERROR'));
     }
 
-    const reunion = await Reunion.create({
+    const reunion = await reunionRepo.create({
       titulo: titulo.trim(),
       descripcion: descripcion?.trim(),
       organizadorId: req.usuarioId,
     });
 
-    await ParticipanteReunion.create({
+    await participanteRepo.create({
       reunionId: reunion._id,
       usuarioId: req.usuarioId,
       rol: 'organizador',
@@ -32,17 +34,26 @@ const crearReunion = async (req, res, next) => {
   }
 };
 
+// GET /api/reuniones?estado=pendiente&titulo=standup&page=1&limit=10
 const obtenerReuniones = async (req, res, next) => {
   try {
-    const participaciones = await ParticipanteReunion.find({ usuarioId: req.usuarioId })
-      .populate('reunionId')
-      .sort({ createdAt: -1 });
+    const { estado, titulo, page, limit } = req.query;
 
-    const reuniones = participaciones
-      .filter(p => p.reunionId)
-      .map(p => ({ ...p.reunionId.toObject(), miRol: p.rol, miEstado: p.estado }));
+    if (estado && !ESTADOS_VALIDOS.includes(estado)) {
+      return res.status(400).json(err('Estado inválido', 'VALIDATION_ERROR'));
+    }
 
-    res.json(ok(reuniones));
+    const pageNum = Math.max(1, parseInt(page) || 1);
+    const limitNum = Math.min(100, Math.max(1, parseInt(limit) || 10));
+
+    const result = await reunionRepo.findByUsuario(req.usuarioId, {
+      estado,
+      titulo,
+      page: pageNum,
+      limit: limitNum,
+    });
+
+    res.json(ok(result));
   } catch (error) {
     next(error);
   }
@@ -50,12 +61,12 @@ const obtenerReuniones = async (req, res, next) => {
 
 const obtenerReunion = async (req, res, next) => {
   try {
-    const reunion = await Reunion.findById(req.params.id);
+    const reunion = await reunionRepo.findById(req.params.id);
     if (!reunion) {
       return res.status(404).json(err('Reunión no encontrada', 'NOT_FOUND'));
     }
 
-    const participacion = await ParticipanteReunion.findOne({
+    const participacion = await participanteRepo.findOne({
       reunionId: reunion._id,
       usuarioId: req.usuarioId,
     });
@@ -76,7 +87,7 @@ const editarReunion = async (req, res, next) => {
       return res.status(400).json(err('El título no puede estar vacío', 'VALIDATION_ERROR'));
     }
 
-    const reunion = await Reunion.findById(req.params.id);
+    const reunion = await reunionRepo.findById(req.params.id);
     if (!reunion) {
       return res.status(404).json(err('Reunión no encontrada', 'NOT_FOUND'));
     }
@@ -84,12 +95,10 @@ const editarReunion = async (req, res, next) => {
       return res.status(400).json(err(`No se puede editar una reunión ${reunion.estado}`, 'INVALID_STATE'));
     }
 
-    const cambios = {};
-    if (titulo) cambios.titulo = titulo.trim();
-    if (descripcion !== undefined) cambios.descripcion = descripcion.trim();
+    if (titulo) reunion.titulo = titulo.trim();
+    if (descripcion !== undefined) reunion.descripcion = descripcion.trim();
 
-    Object.assign(reunion, cambios);
-    await reunion.save();
+    await reunionRepo.save(reunion);
 
     res.json(ok(reunion));
   } catch (error) {
@@ -104,7 +113,7 @@ const confirmarReunion = async (req, res, next) => {
       return res.status(400).json(err('Se requiere opcionId', 'VALIDATION_ERROR'));
     }
 
-    const reunion = await Reunion.findById(req.params.id);
+    const reunion = await reunionRepo.findById(req.params.id);
     if (!reunion) {
       return res.status(404).json(err('Reunión no encontrada', 'NOT_FOUND'));
     }
@@ -112,20 +121,14 @@ const confirmarReunion = async (req, res, next) => {
       return res.status(400).json(err(`La reunión ya está ${reunion.estado}`, 'INVALID_STATE'));
     }
 
-    // Validar que la opción pertenezca a esta reunión
-    const opcion = await OpcionHorario.findOne({ _id: opcionId, reunionId: reunion._id });
+    const opcion = await opcionRepo.findOne({ _id: opcionId, reunionId: reunion._id });
     if (!opcion) {
       return res.status(404).json(err('La opción no pertenece a esta reunión', 'NOT_FOUND'));
     }
 
-    // Advertir si se confirma una opción sin disponibilidades
-    const dispCount = await Disponibilidad.find({ opcionHorarioId: opcion._id, disponible: true });
-    if (dispCount.length === 0) {
-      // No bloqueamos — solo advertimos en la respuesta al final
-    }
+    const dispCount = await disponibilidadRepo.find({ opcionHorarioId: opcion._id, disponible: true });
 
-    // Validar que haya al menos 1 participante además del organizador
-    const totalParticipantes = await ParticipanteReunion.find({ reunionId: reunion._id });
+    const totalParticipantes = await participanteRepo.find({ reunionId: reunion._id });
     const soloOrganizador = totalParticipantes.every(p => p.rol === 'organizador');
     if (soloOrganizador || totalParticipantes.length <= 1) {
       return res.status(400).json(err('Debes agregar al menos un participante antes de confirmar', 'VALIDATION_ERROR'));
@@ -133,10 +136,9 @@ const confirmarReunion = async (req, res, next) => {
 
     reunion.estado = 'confirmada';
     reunion.opcionConfirmadaId = opcion._id;
-    await reunion.save();
+    await reunionRepo.save(reunion);
 
-    const participantes = await ParticipanteReunion.find({ reunionId: reunion._id })
-      .populate('usuarioId');
+    const participantes = await participanteRepo.findWithPopulate({ reunionId: reunion._id }, 'usuarioId');
 
     const fechaHora = new Date(opcion.fechaHora).toLocaleString('es-MX', {
       dateStyle: 'long', timeStyle: 'short',
@@ -150,7 +152,6 @@ const confirmarReunion = async (req, res, next) => {
       reunion._id,
     );
 
-    // Fire-and-forget: los emails no bloquean la respuesta HTTP
     Promise.all(validos.map(p => enviarConfirmacion({
       destinatario: p.usuarioId.email,
       nombre: p.usuarioId.nombre,
@@ -169,7 +170,7 @@ const confirmarReunion = async (req, res, next) => {
 
 const cancelarReunion = async (req, res, next) => {
   try {
-    const reunion = await Reunion.findById(req.params.id);
+    const reunion = await reunionRepo.findById(req.params.id);
     if (!reunion) {
       return res.status(404).json(err('Reunión no encontrada', 'NOT_FOUND'));
     }
@@ -178,10 +179,9 @@ const cancelarReunion = async (req, res, next) => {
     }
 
     reunion.estado = 'cancelada';
-    await reunion.save();
+    await reunionRepo.save(reunion);
 
-    const participantes = await ParticipanteReunion.find({ reunionId: reunion._id })
-      .populate('usuarioId');
+    const participantes = await participanteRepo.findWithPopulate({ reunionId: reunion._id }, 'usuarioId');
 
     const validos = participantes.filter(p => p.usuarioId);
     const ids = validos.map(p => p.usuarioId._id);
@@ -192,7 +192,6 @@ const cancelarReunion = async (req, res, next) => {
       reunion._id,
     );
 
-    // Fire-and-forget
     Promise.all(validos.map(p => enviarCancelacion({
       destinatario: p.usuarioId.email,
       nombre: p.usuarioId.nombre,
@@ -205,10 +204,9 @@ const cancelarReunion = async (req, res, next) => {
   }
 };
 
-// Envía recordatorio a participantes que no han respondido ninguna opción
 const recordarParticipantes = async (req, res, next) => {
   try {
-    const reunion = await Reunion.findById(req.params.id);
+    const reunion = await reunionRepo.findById(req.params.id);
     if (!reunion) {
       return res.status(404).json(err('Reunión no encontrada', 'NOT_FOUND'));
     }
@@ -216,11 +214,9 @@ const recordarParticipantes = async (req, res, next) => {
       return res.status(400).json(err(`No se puede recordar en una reunión ${reunion.estado}`, 'INVALID_STATE'));
     }
 
-    const participantes = await ParticipanteReunion.find({ reunionId: reunion._id })
-      .populate('usuarioId');
+    const participantes = await participanteRepo.findWithPopulate({ reunionId: reunion._id }, 'usuarioId');
 
-    // Quiénes han respondido al menos una opción
-    const dispTodas = await Disponibilidad.find({ reunionId: reunion._id });
+    const dispTodas = await disponibilidadRepo.find({ reunionId: reunion._id });
     const respondieronIds = new Set(dispTodas.map(d => String(d.participanteId)));
 
     const pendientes = participantes.filter(
@@ -238,7 +234,6 @@ const recordarParticipantes = async (req, res, next) => {
       reunion._id,
     );
 
-    // Fire-and-forget
     Promise.all(pendientes.map(p => enviarRecordatorio({
       destinatario: p.usuarioId.email,
       nombre: p.usuarioId.nombre,
@@ -251,8 +246,32 @@ const recordarParticipantes = async (req, res, next) => {
   }
 };
 
+const eliminarReunion = async (req, res, next) => {
+  try {
+    const reunion = await reunionRepo.findById(req.params.id);
+    if (!reunion) {
+      return res.status(404).json(err('Reunión no encontrada', 'NOT_FOUND'));
+    }
+
+    if (String(reunion.organizadorId) !== String(req.usuarioId)) {
+      return res.status(403).json(err('Solo el organizador puede eliminar la reunión', 'FORBIDDEN'));
+    }
+
+    const opciones = await opcionRepo.find({ reunionId: reunion._id });
+    const opcionIds = opciones.map(o => o._id);
+    await disponibilidadRepo.deleteMany({ opcionHorarioId: { $in: opcionIds } });
+    await opcionRepo.deleteMany({ reunionId: reunion._id });
+    await participanteRepo.deleteMany({ reunionId: reunion._id });
+    await reunionRepo.findByIdAndDelete(reunion._id);
+
+    res.json(ok({ mensaje: 'Reunión eliminada correctamente' }));
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   crearReunion, obtenerReuniones, obtenerReunion,
   editarReunion, confirmarReunion, cancelarReunion,
-  recordarParticipantes,
+  recordarParticipantes, eliminarReunion,
 };

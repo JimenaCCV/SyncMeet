@@ -1,6 +1,6 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const Usuario = require('../models/Usuario');
+const usuarioRepo = require('../repositories/usuario.repository');
 const { JWT_SECRET, JWT_EXPIRES_IN } = require('../config/env');
 const { ok, err } = require('../utils/respuesta');
 const { esEmailValido } = require('../utils/validaciones');
@@ -26,13 +26,13 @@ const registro = async (req, res, next) => {
     }
 
     const emailNorm = email.toLowerCase();
-    const existe = await Usuario.findOne({ email: emailNorm });
+    const existe = await usuarioRepo.findByEmail(emailNorm);
     if (existe) {
       return res.status(409).json(err('El email ya está registrado', 'CONFLICT'));
     }
 
-    const hash = await bcrypt.hash(password, 10);
-    const usuario = await Usuario.create({ nombre, email: emailNorm, password: hash });
+    // El hook pre('save') del modelo se encarga de hashear el password
+    const usuario = await usuarioRepo.create({ nombre, email: emailNorm, password });
 
     res.status(201).json(ok({ _id: usuario._id, nombre: usuario.nombre, email: usuario.email }));
   } catch (error) {
@@ -51,7 +51,7 @@ const login = async (req, res, next) => {
       return res.status(400).json(err('Formato de datos inválido', 'VALIDATION_ERROR'));
     }
 
-    const usuario = await Usuario.findOne({ email: email.toLowerCase() });
+    const usuario = await usuarioRepo.findByEmail(email.toLowerCase());
     if (!usuario) {
       return res.status(401).json(err('Credenciales incorrectas', 'AUTH_REQUIRED'));
     }
@@ -65,7 +65,7 @@ const login = async (req, res, next) => {
 
     res.json(ok({
       token,
-      usuario: { _id: usuario._id, nombre: usuario.nombre, email: usuario.email }
+      usuario: { _id: usuario._id, nombre: usuario.nombre, email: usuario.email },
     }));
   } catch (error) {
     next(error);
@@ -82,7 +82,7 @@ const logout = async (req, res, next) => {
 
 const perfil = async (req, res, next) => {
   try {
-    const usuario = await Usuario.findById(req.usuarioId).select('-password');
+    const usuario = await usuarioRepo.findById(req.usuarioId, '-password');
     if (!usuario) {
       return res.status(404).json(err('Usuario no encontrado', 'NOT_FOUND'));
     }
