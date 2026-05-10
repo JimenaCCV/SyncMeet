@@ -4,8 +4,8 @@ const { PORT } = require('./src/config/env');
 
 const iniciar = async () => {
   await conectarDB();
-  app.listen(PORT, () => {
-    console.log(`Servidor corriendo en puerto ${PORT}`);
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log(`Servidor corriendo en 0.0.0.0:${PORT}`);
   });
 };
 
