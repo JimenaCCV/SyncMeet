@@ -1,0 +1,1111 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SyncMeet</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="syncmeet.css">
+</head>
+<body>
+
+<!-- NAVBAR -->
+<nav class="navbar navbar-light bg-white border-bottom">
+  <div class="container-fluid px-3">
+    <a class="navbar-brand mb-0" href="#" onclick="goTo('landing')">
+      <i class="bi bi-calendar-check me-1"></i>SyncMeet
+    </a>
+    <div id="nav-guest">
+      <button class="btn btn-outline-secondary btn-sm me-2" onclick="goTo('login')">Iniciar sesión</button>
+      <button class="btn btn-success btn-sm" onclick="goTo('register')">Registrarse</button>
+    </div>
+    <div id="nav-auth" class="d-none d-flex align-items-center gap-2">
+      <button class="btn btn-link btn-sm text-secondary position-relative p-1" onclick="goTo('notifications')">
+        <i class="bi bi-bell fs-5"></i>
+        <span id="notif-badge" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger d-none" style="font-size:9px;padding:3px 5px">0</span>
+      </button>
+      <span id="nav-username" class="text-muted small"></span>
+      <button class="btn btn-outline-secondary btn-sm" onclick="logout()"><i class="bi bi-box-arrow-right"></i></button>
+    </div>
+  </div>
+</nav>
+
+
+<!-- LANDING -->
+<div class="view active" id="view-landing">
+  <div class="container py-5 text-center">
+    <h1 class="fw-bold mb-3">¿Cuándo pueden todos? 📅</h1>
+    <p class="text-muted mb-4">SyncMeet te ayuda a encontrar el horario que le queda a todo el equipo<br>sin andar mandando mensajes por WhatsApp.</p>
+    <div class="d-flex justify-content-center gap-2 mb-5">
+      <button class="btn btn-success px-4" onclick="goTo('register')">Entrar</button>
+      <button class="btn btn-outline-secondary px-4" onclick="goTo('login')">Ya tengo cuenta</button>
+    </div>
+    <div class="row g-3 justify-content-center">
+      <div class="col-md-4 d-flex">
+        <div class="card p-3 w-100">
+          <i class="bi bi-calendar-range text-success fs-4 mb-2"></i>
+          <h6 class="fw-bold">Propón varios horarios</h6>
+          <p class="text-muted small mb-0">El que organiza agrega las fechas y cada quien marca cuándo puede.</p>
+        </div>
+      </div>
+      <div class="col-md-4 d-flex">
+        <div class="card p-3 w-100">
+          <i class="bi bi-bar-chart text-warning fs-4 mb-2"></i>
+          <h6 class="fw-bold">Ve quién puede y cuándo</h6>
+          <p class="text-muted small mb-0">El sistema muestra qué horario le queda a más gente.</p>
+        </div>
+      </div>
+      <div class="col-md-4 d-flex">
+        <div class="card p-3 w-100">
+          <i class="bi bi-bell text-danger fs-4 mb-2"></i>
+          <h6 class="fw-bold">Avisos al instante</h6>
+          <p class="text-muted small mb-0">Todos reciben notificación cuando se confirma o cancela la reunión.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+  <footer class="text-center text-muted small py-4 border-top">
+    SyncMeet · Desarrollo de Aplicaciones y Páginas Web 2026<br>
+    Sarah Moreno León · Jimena Carolina Corona Vázquez · Emiliano del Toro Álvarez
+  </footer>
+</div>
+
+
+<!-- REGISTRO -->
+<div class="view" id="view-register">
+  <div class="container py-5">
+    <div class="row justify-content-center">
+      <div class="col-md-5">
+        <div class="card p-4">
+          <h4 class="fw-bold mb-1">Crear cuenta</h4>
+          <p class="text-muted small mb-4">Únete a SyncMeet para coordinar reuniones.</p>
+          <div class="mb-3">
+            <label class="form-label small fw-semibold">Nombre completo</label>
+            <input type="text" class="form-control" id="reg-name" placeholder="Tu nombre completo">
+            <div class="invalid-feedback">El nombre completo es requerido.</div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label small fw-semibold">Correo electrónico</label>
+            <input type="email" class="form-control" id="reg-email" placeholder="correo@ejemplo.com">
+            <div class="invalid-feedback">Ingresa un correo electrónico válido.</div>
+          </div>
+          <div class="mb-4">
+            <label class="form-label small fw-semibold">Contraseña</label>
+            <input type="password" class="form-control" id="reg-password" placeholder="Mínimo 8 caracteres">
+            <div class="invalid-feedback">La contraseña debe tener al menos 8 caracteres.</div>
+          </div>
+          <button class="btn btn-success w-100" id="btn-register" onclick="register()">Crear cuenta</button>
+          <p class="text-center text-muted small mt-3 mb-0">¿Ya tienes cuenta? <a href="#" class="text-success text-decoration-none" onclick="goTo('login')">Inicia sesión</a></p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- LOGIN -->
+<div class="view" id="view-login">
+  <div class="container py-5">
+    <div class="row justify-content-center">
+      <div class="col-md-5">
+        <div class="card p-4">
+          <h4 class="fw-bold mb-1">Iniciar sesión</h4>
+          <div class="mb-3">
+            <label class="form-label small fw-semibold">Correo</label>
+            <input type="email" class="form-control" id="login-email" placeholder="correo@ejemplo.com">
+            <div class="invalid-feedback">Ingresa un correo válido.</div>
+          </div>
+          <div class="mb-4">
+            <label class="form-label small fw-semibold">Contraseña</label>
+            <input type="password" class="form-control" id="login-password" placeholder="Tu contraseña">
+            <div class="invalid-feedback">La contraseña es requerida.</div>
+          </div>
+          <button class="btn btn-success w-100" id="btn-login" onclick="login()">Iniciar sesión</button>
+          <p class="text-center text-muted small mt-3 mb-0">¿No tienes cuenta? <a href="#" class="text-success text-decoration-none" onclick="goTo('register')">Regístrate</a></p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- DASHBOARD UNIFICADO -->
+<div class="view" id="view-dashboard">
+  <div class="d-flex">
+    <div class="sidebar">
+      <nav class="nav flex-column">
+        <a class="nav-link active" href="#" onclick="goTo('dashboard')"><i class="bi bi-grid me-2"></i>Mis reuniones</a>
+        <a class="nav-link" href="#" onclick="goTo('create-meeting')"><i class="bi bi-plus-circle me-2"></i>Nueva reunión</a>
+        <a class="nav-link" href="#" onclick="goTo('notifications')"><i class="bi bi-bell me-2"></i>Notificaciones</a>
+        <hr class="my-2">
+        <a class="nav-link text-danger" href="#" onclick="logout()"><i class="bi bi-box-arrow-right me-2"></i>Cerrar sesión</a>
+      </nav>
+    </div>
+    <div class="main-content">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h4 class="fw-bold mb-0" id="greeting-dashboard">Hola 👋</h4>
+        <button class="btn btn-success btn-sm" onclick="goTo('create-meeting')"><i class="bi bi-plus me-1"></i>Nueva reunión</button>
+      </div>
+      <!-- Filtros -->
+      <div class="d-flex gap-2 mb-3 flex-wrap">
+        <button class="btn btn-success btn-sm" id="filter-all" onclick="filterMeetings('all')">Todas</button>
+        <button class="btn btn-outline-secondary btn-sm" id="filter-organizador" onclick="filterMeetings('organizador')">Organizando</button>
+        <button class="btn btn-outline-secondary btn-sm" id="filter-participante" onclick="filterMeetings('participante')">Invitaciones</button>
+      </div>
+      <div id="meetings-list">
+        <div class="text-muted small"><span class="spinner-border spinner-border-sm me-2"></span>Cargando reuniones...</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- CREAR REUNIÓN -->
+<div class="view" id="view-create-meeting">
+  <div class="container py-4" style="max-width:620px">
+    <button class="btn btn-link text-muted ps-0 mb-3 text-decoration-none" onclick="goTo('dashboard')"><i class="bi bi-arrow-left me-1"></i>Volver</button>
+    <div class="card p-4">
+      <h5 class="fw-bold mb-4">Nueva reunión</h5>
+      <div class="mb-3">
+        <label class="form-label small fw-semibold">Título</label>
+        <input type="text" class="form-control" id="meeting-title" placeholder="Ej. Reunión de Proyecto Final">
+        <div class="invalid-feedback">El título de la reunión es requerido.</div>
+      </div>
+      <div class="mb-3">
+        <label class="form-label small fw-semibold">Descripción <span class="text-muted fw-normal">(opcional)</span></label>
+        <textarea class="form-control" id="meeting-desc" rows="2" placeholder="Breve descripción de la reunión..."></textarea>
+      </div>
+      <hr>
+      <div class="fw-semibold small mb-2">Opciones de horario</div>
+      <div class="d-flex gap-2 mb-2 align-items-center">
+        <input type="datetime-local" class="form-control form-control-sm" id="slot-datetime">
+        <button class="btn btn-sm btn-outline-success flex-shrink-0" onclick="addSlot()"><i class="bi bi-plus me-1"></i>Agregar</button>
+      </div>
+      <div class="form-text text-muted mb-2">Mínimo 1 hora en el futuro, máximo 1 año.</div>
+      <div id="slotsContainer" class="mb-2"></div>
+      <hr>
+      <div class="fw-semibold small mb-2">Participantes</div>
+      <div class="d-flex gap-2 mb-2 align-items-start">
+        <div class="flex-grow-1">
+          <input type="email" class="form-control form-control-sm" id="emailInput" placeholder="correo@ejemplo.com">
+          <div class="invalid-feedback">Ingresa un correo electrónico válido.</div>
+        </div>
+        <button class="btn btn-sm btn-outline-success" onclick="addParticipant()">Añadir</button>
+      </div>
+      <div id="chipsContainer" class="mb-2"></div>
+      <div class="d-flex gap-2 mt-4">
+        <button class="btn btn-success" id="btn-create-meeting" onclick="createMeeting()">Crear reunión</button>
+        <button class="btn btn-outline-secondary" onclick="goTo('dashboard')">Cancelar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- DETALLE ORG (pendiente) -->
+<div class="view" id="view-detail-org">
+  <div class="container py-4" style="max-width:680px">
+    <button class="btn btn-link text-muted ps-0 mb-3 text-decoration-none" onclick="goTo('dashboard')"><i class="bi bi-arrow-left me-1"></i>Mis reuniones</button>
+    <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
+      <div>
+        <h4 class="fw-bold mb-1" id="detail-org-title"></h4>
+        <span class="badge bg-warning text-dark">Pendiente</span>
+      </div>
+      <div class="d-flex gap-2">
+        <button class="btn btn-sm btn-outline-warning" id="btn-recordar" onclick="recordarPendientes()">
+          <i class="bi bi-alarm me-1"></i>Recordar pendientes
+        </button>
+        <button class="btn btn-sm btn-outline-danger" onclick="openCancelModal()">
+          <i class="bi bi-x-circle me-1"></i>Cancelar
+        </button>
+      </div>
+    </div>
+    <p class="text-muted small mb-3" id="detail-org-desc">Selecciona un horario y confirma la reunión.</p>
+    <!-- Resumen de respuestas -->
+    <div id="detail-org-progress" class="mb-3"></div>
+    <div id="slots-list-org"></div>
+    <div class="d-flex gap-2 mt-3">
+      <button class="btn btn-success" id="btn-confirm-meeting" onclick="tryConfirm()"><i class="bi bi-check2-circle me-1"></i>Confirmar horario</button>
+      <button class="btn btn-outline-secondary" onclick="goTo('dashboard')">Volver</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- DETALLE ORG (confirmada) -->
+<div class="view" id="view-detail-confirmed">
+  <div class="container py-4" style="max-width:680px">
+    <button class="btn btn-link text-muted ps-0 mb-3 text-decoration-none" onclick="goTo('dashboard')"><i class="bi bi-arrow-left me-1"></i>Mis reuniones</button>
+    <div class="alert alert-success d-flex align-items-center gap-2 mb-4">
+      <i class="bi bi-check-circle-fill fs-5"></i>
+      <span><strong>Reunión confirmada.</strong> Todos fueron notificados.</span>
+    </div>
+    <h4 class="fw-bold mb-1" id="confirmed-title"></h4>
+    <p class="text-success fw-bold"><i class="bi bi-calendar-event me-1"></i><span id="confirmed-date"></span></p>
+  </div>
+</div>
+
+
+<!-- DETALLE PARTICIPANTE (pendiente) -->
+<div class="view" id="view-detail-part">
+  <div class="container py-4" style="max-width:620px">
+    <button class="btn btn-link text-muted ps-0 mb-3 text-decoration-none" onclick="goTo('dashboard')"><i class="bi bi-arrow-left me-1"></i>Mis reuniones</button>
+    <h4 class="fw-bold mb-1" id="detail-part-title"></h4>
+    <p class="text-muted small mb-3" id="detail-part-org"></p>
+    <div class="alert alert-warning small py-2 mb-4">
+      <i class="bi bi-info-circle me-1"></i>Marca los horarios en los que <strong>puedes asistir</strong>.
+    </div>
+    <div id="avail-list"></div>
+    <button class="btn btn-success mt-3" id="btn-submit-avail" onclick="submitAvail()"><i class="bi bi-send me-1"></i>Enviar disponibilidad</button>
+  </div>
+</div>
+
+
+<!-- DETALLE PARTICIPANTE (confirmada) -->
+<div class="view" id="view-detail-part-confirmed">
+  <div class="container py-4" style="max-width:620px">
+    <button class="btn btn-link text-muted ps-0 mb-3 text-decoration-none" onclick="goTo('dashboard')"><i class="bi bi-arrow-left me-1"></i>Mis reuniones</button>
+    <div class="alert alert-success d-flex align-items-center gap-2 mb-4">
+      <i class="bi bi-calendar-check-fill fs-5"></i>
+      <span><strong>¡Reunión confirmada!</strong></span>
+    </div>
+    <h4 class="fw-bold mb-1" id="part-confirmed-title"></h4>
+    <p class="text-success fw-bold fs-6"><i class="bi bi-calendar-event me-1"></i><span id="part-confirmed-date"></span></p>
+    <div class="alert alert-secondary small mb-0">
+      <i class="bi bi-lock me-1"></i>La encuesta está cerrada.
+    </div>
+  </div>
+</div>
+
+
+<!-- NOTIFICACIONES -->
+<div class="view" id="view-notifications">
+  <div class="container py-4" style="max-width:620px">
+    <button class="btn btn-link text-muted ps-0 mb-3 text-decoration-none" onclick="goTo('dashboard')"><i class="bi bi-arrow-left me-1"></i>Volver</button>
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <div>
+        <h4 class="fw-bold mb-0">Notificaciones</h4>
+        <p class="text-muted small mb-0" id="notif-count-text">0 sin leer</p>
+      </div>
+      <button class="btn btn-sm btn-outline-secondary" id="btn-mark-all" onclick="markAllRead()">Marcar todas como leídas</button>
+    </div>
+    <div id="notif-list">
+      <div class="text-muted small"><span class="spinner-border spinner-border-sm me-2"></span>Cargando...</div>
+    </div>
+  </div>
+</div>
+
+
+<!-- MODAL: Cancelar reunión -->
+<div class="modal-overlay" id="modal-cancel" onclick="closeModal('cancel')">
+  <div class="card p-4" style="max-width:420px;width:90%" onclick="event.stopPropagation()">
+    <h5 class="fw-bold mb-2"><i class="bi bi-exclamation-triangle text-danger me-2"></i>Cancelar reunión</h5>
+    <p class="text-muted small mb-1">¿Seguro que quieres cancelar <strong id="modal-cancel-title">esta reunión</strong>?</p>
+    <p class="text-muted small mb-3">Todos los participantes serán notificados. <strong>Esta acción no se puede deshacer.</strong></p>
+    <div class="d-flex justify-content-end gap-2">
+      <button class="btn btn-outline-secondary btn-sm" onclick="closeModal('cancel')">No, regresar</button>
+      <button class="btn btn-danger btn-sm" id="btn-do-cancel" onclick="confirmCancel()">Sí, cancelar reunión</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Confirmar reunión -->
+<div class="modal-overlay" id="modal-confirm" onclick="closeModal('confirm')">
+  <div class="card p-4" style="max-width:420px;width:90%" onclick="event.stopPropagation()">
+    <h5 class="fw-bold mb-2"><i class="bi bi-check2-circle text-success me-2"></i>Confirmar reunión</h5>
+    <p class="text-muted small mb-1">Se confirmará la reunión para:</p>
+    <p class="fw-semibold small mb-4" id="modal-confirm-date"></p>
+    <div class="d-flex justify-content-end gap-2">
+      <button class="btn btn-outline-secondary btn-sm" onclick="closeModal('confirm')">Cancelar</button>
+      <button class="btn btn-success btn-sm" id="btn-do-confirm" onclick="confirmMeeting()">Confirmar</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast-box" id="toastBox"></div>
+
+<script>
+const API = 'http://localhost:3000/api';
+
+let token = localStorage.getItem('sm_token') || null;
+let currentUser = null;
+let currentMeetingId = null;
+let currentMeetingTitle = '';
+let selectedOpcionId = null;
+let pendingSlots = [];
+let allMeetings = [];
+let currentFilter = 'all';
+
+// ── utilidades ────────────────────────────────────────────────────────────
+
+// Detecta la zona horaria del navegador para mostrar fechas en hora local
+const userTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
+function formatDate(iso) {
+  if (!iso) return '';
+  return new Date(iso).toLocaleString('es-MX', {
+    dateStyle: 'long', timeStyle: 'short', timeZone: userTimeZone,
+  });
+}
+
+function escHtml(str) {
+  const d = document.createElement('div');
+  d.textContent = String(str ?? '');
+  return d.innerHTML;
+}
+
+function badgeFor(estado) {
+  return { pendiente: 'bg-warning text-dark', confirmada: 'bg-success', cancelada: 'bg-secondary' }[estado] || 'bg-secondary';
+}
+
+function validateEmail(email) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
+function markInvalid(el, msg) {
+  el.classList.add('is-invalid');
+  el.classList.remove('is-valid');
+  const fb = el.parentElement.querySelector('.invalid-feedback');
+  if (fb && msg) fb.textContent = msg;
+}
+
+function markValid(el) {
+  el.classList.remove('is-invalid');
+  el.classList.add('is-valid');
+}
+
+function clearField(el) {
+  el.classList.remove('is-invalid', 'is-valid');
+}
+
+// Deshabilita un botón y muestra spinner mientras se procesa la acción
+function setLoading(btn, isLoading) {
+  if (!btn) return;
+  if (isLoading) {
+    btn.dataset.originalHtml = btn.innerHTML;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Procesando...';
+    btn.disabled = true;
+  } else {
+    btn.innerHTML = btn.dataset.originalHtml || btn.innerHTML;
+    btn.disabled = false;
+  }
+}
+
+function showToast(msg, type = 'success') {
+  const box = document.getElementById('toastBox');
+  const div = document.createElement('div');
+  div.className = `toast show align-items-center text-bg-${type} border-0 mb-2`;
+  const body = document.createElement('div');
+  body.className = 'd-flex';
+  const text = document.createElement('div');
+  text.className = 'toast-body small';
+  text.textContent = msg;
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'btn-close btn-close-white me-2 m-auto';
+  btn.onclick = () => div.remove();
+  body.append(text, btn);
+  div.appendChild(body);
+  box.appendChild(div);
+  setTimeout(() => { if (div.parentNode) div.remove(); }, 3500);
+}
+
+// ── API fetch con manejo de errores ──────────────────────────────────────
+
+async function apiFetch(path, opts = {}) {
+  const headers = { 'Content-Type': 'application/json' };
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+
+  let res;
+  try {
+    res = await fetch(API + path, { ...opts, headers: { ...headers, ...(opts.headers || {}) } });
+  } catch (networkError) {
+    // Error de red: servidor caído, sin conexión, timeout
+    throw { status: 0, message: 'No se pudo conectar con el servidor. Verifica tu conexión.' };
+  }
+
+  const json = await res.json().catch(() => ({}));
+
+  // Token expirado o inválido: cerrar sesión y redirigir al login
+  if (res.status === 401) {
+    const wasLoggedIn = !!currentUser;
+    token = null;
+    currentUser = null;
+    localStorage.removeItem('sm_token');
+    localStorage.removeItem('sm_user');
+    updateNav();
+    showView('login');
+    if (wasLoggedIn) showToast('Tu sesión expiró. Por favor inicia sesión nuevamente.', 'warning');
+    throw { status: 401, message: json.error || 'Sesión expirada' };
+  }
+
+  if (!res.ok) throw { status: res.status, message: json.error || 'Error desconocido' };
+  return json.data;
+}
+
+// ── navegación ────────────────────────────────────────────────────────────
+
+function showView(name) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  const el = document.getElementById('view-' + name);
+  if (el) { el.classList.add('active'); window.scrollTo(0, 0); }
+  updateNav();
+}
+
+async function goTo(name) {
+  // Redirigir dashboard-part al dashboard unificado
+  if (name === 'dashboard-part') name = 'dashboard';
+
+  showView(name);
+  if (name === 'dashboard') await loadDashboard();
+  else if (name === 'notifications') await loadNotifications();
+  else if (name === 'create-meeting') resetCreateMeeting();
+}
+
+function updateNav() {
+  document.getElementById('nav-guest').classList.toggle('d-none', !!currentUser);
+  document.getElementById('nav-auth').classList.toggle('d-none', !currentUser);
+  if (currentUser) {
+    const parts = currentUser.nombre.split(' ');
+    document.getElementById('nav-username').textContent = parts[0] + (parts[1] ? ' ' + parts[1][0] + '.' : '');
+  }
+}
+
+function updateGreetings() {
+  if (!currentUser) return;
+  const name = currentUser.nombre.split(' ')[0];
+  document.getElementById('greeting-dashboard').textContent = `Hola, ${name} 👋`;
+}
+
+// ── auth ──────────────────────────────────────────────────────────────────
+
+async function register() {
+  const nameEl  = document.getElementById('reg-name');
+  const emailEl = document.getElementById('reg-email');
+  const passEl  = document.getElementById('reg-password');
+  const btn     = document.getElementById('btn-register');
+  let valid = true;
+
+  [nameEl, emailEl, passEl].forEach(clearField);
+  if (!nameEl.value.trim())               { markInvalid(nameEl, 'El nombre completo es requerido.'); valid = false; } else markValid(nameEl);
+  if (!validateEmail(emailEl.value.trim())) { markInvalid(emailEl, 'Ingresa un correo electrónico válido.'); valid = false; } else markValid(emailEl);
+  if (passEl.value.length < 8)            { markInvalid(passEl, 'La contraseña debe tener al menos 8 caracteres.'); valid = false; } else markValid(passEl);
+  if (!valid) return;
+
+  setLoading(btn, true);
+  try {
+    await apiFetch('/auth/registro', {
+      method: 'POST',
+      body: JSON.stringify({ nombre: nameEl.value.trim(), email: emailEl.value.trim(), password: passEl.value }),
+    });
+    showToast('¡Cuenta creada! Ahora inicia sesión.', 'success');
+    nameEl.value = ''; emailEl.value = ''; passEl.value = '';
+    [nameEl, emailEl, passEl].forEach(clearField);
+    showView('login');
+  } catch (e) {
+    showToast(e.message, 'danger');
+  } finally {
+    setLoading(btn, false);
+  }
+}
+
+async function login() {
+  const emailEl = document.getElementById('login-email');
+  const passEl  = document.getElementById('login-password');
+  const btn     = document.getElementById('btn-login');
+  let valid = true;
+
+  [emailEl, passEl].forEach(clearField);
+  if (!validateEmail(emailEl.value.trim())) { markInvalid(emailEl, 'Ingresa un correo válido.'); valid = false; }
+  if (!passEl.value)                         { markInvalid(passEl, 'La contraseña es requerida.'); valid = false; }
+  if (!valid) return;
+
+  setLoading(btn, true);
+  try {
+    const data = await apiFetch('/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ email: emailEl.value.trim(), password: passEl.value }),
+    });
+    token = data.token;
+    currentUser = data.usuario;
+    localStorage.setItem('sm_token', token);
+    localStorage.setItem('sm_user', JSON.stringify(currentUser));
+    passEl.value = '';
+    updateNav();
+    updateGreetings();
+    await goTo('dashboard');
+    await loadNotifications();
+    showToast('Sesión iniciada.', 'success');
+  } catch (e) {
+    if (e.status !== 401) showToast(e.message, 'danger');
+  } finally {
+    setLoading(btn, false);
+  }
+}
+
+async function logout() {
+  try { await apiFetch('/auth/logout', { method: 'POST' }); } catch {}
+  token = null;
+  currentUser = null;
+  localStorage.removeItem('sm_token');
+  localStorage.removeItem('sm_user');
+  updateNav();
+  showToast('Sesión cerrada.', 'secondary');
+  showView('landing');
+}
+
+// ── dashboard unificado ───────────────────────────────────────────────────
+
+async function loadDashboard() {
+  if (!currentUser) return;
+  const list = document.getElementById('meetings-list');
+  list.innerHTML = '<div class="text-muted small"><span class="spinner-border spinner-border-sm me-2"></span>Cargando reuniones...</div>';
+  try {
+    allMeetings = await apiFetch('/reuniones');
+    updateGreetings();
+    filterMeetings(currentFilter);
+  } catch (e) {
+    if (e.status !== 401) {
+      list.innerHTML = `<div class="alert alert-danger small">${escHtml(e.message)}</div>`;
+    }
+  }
+}
+
+function filterMeetings(filter) {
+  currentFilter = filter;
+
+  // Actualizar estilos de botones de filtro
+  ['all', 'organizador', 'participante'].forEach(f => {
+    const btn = document.getElementById('filter-' + f);
+    if (!btn) return;
+    const active = f === filter;
+    btn.classList.toggle('btn-success', active);
+    btn.classList.toggle('btn-outline-secondary', !active);
+  });
+
+  const filtered = filter === 'all'
+    ? allMeetings
+    : allMeetings.filter(r => r.miRol === filter);
+
+  renderMeetings(filtered);
+}
+
+function renderMeetings(reuniones) {
+  const list = document.getElementById('meetings-list');
+
+  if (!reuniones.length) {
+    const esOrg = currentFilter === 'organizador';
+    const esPart = currentFilter === 'participante';
+    const msg = currentFilter === 'all'
+      ? '¡Aún no tienes reuniones!'
+      : esOrg ? 'No estás organizando ninguna reunión aún.'
+      : 'No tienes invitaciones pendientes.';
+    list.innerHTML = `
+      <div class="text-center py-5">
+        <i class="bi bi-calendar-x text-muted" style="font-size:2.5rem"></i>
+        <p class="text-muted mt-3 mb-2">${escHtml(msg)}</p>
+        ${!esPart ? '<button class="btn btn-success btn-sm" onclick="goTo(\'create-meeting\')"><i class="bi bi-plus me-1"></i>Crear reunión</button>' : ''}
+      </div>`;
+    return;
+  }
+
+  list.innerHTML = reuniones.map(r => {
+    const rolBadge = r.miRol === 'organizador'
+      ? '<span class="badge small" style="background:rgba(91,79,207,.12);color:#5b4fcf;border:1px solid rgba(91,79,207,.3)">Organizador</span>'
+      : '<span class="badge small bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-25">Invitado</span>';
+
+    const statusText = r.miRol === 'organizador'
+      ? (r.estado === 'confirmada' ? 'Reunión confirmada' : r.estado === 'cancelada' ? 'Reunión cancelada' : 'Pendiente de respuestas')
+      : (r.estado === 'confirmada' ? 'Reunión confirmada' : r.estado === 'cancelada' ? 'Reunión cancelada' : 'Pendiente tu respuesta');
+
+    const onclick = r.miRol === 'organizador'
+      ? `openMeetingOrg('${r._id}')`
+      : `openMeetingPart('${r._id}')`;
+
+    return `
+      <div class="meeting-row" onclick="${onclick}">
+        <div class="d-flex justify-content-between align-items-center gap-2">
+          <div class="flex-grow-1 min-w-0">
+            <div class="d-flex align-items-center gap-2 flex-wrap mb-1">
+              <span class="fw-semibold small">${escHtml(r.titulo)}</span>
+              ${rolBadge}
+            </div>
+            <div class="text-muted" style="font-size:13px">${escHtml(statusText)}</div>
+          </div>
+          <span class="badge ${badgeFor(r.estado)} flex-shrink-0">${r.estado.charAt(0).toUpperCase() + r.estado.slice(1)}</span>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+// ── detalle organizador ───────────────────────────────────────────────────
+
+async function openMeetingOrg(reunionId) {
+  currentMeetingId = reunionId;
+  try {
+    const [reunion, opciones] = await Promise.all([
+      apiFetch(`/reuniones/${reunionId}`),
+      apiFetch(`/reuniones/${reunionId}/opciones`),
+    ]);
+
+    currentMeetingTitle = reunion.titulo;
+
+    if (reunion.estado === 'confirmada') {
+      document.getElementById('confirmed-title').textContent = reunion.titulo;
+      const opConf = opciones.find(o => String(o._id) === String(reunion.opcionConfirmadaId));
+      document.getElementById('confirmed-date').textContent = opConf ? formatDate(opConf.fechaHora) : '';
+      showView('detail-confirmed');
+      return;
+    }
+    if (reunion.estado === 'cancelada') {
+      showToast('Esta reunión está cancelada.', 'secondary');
+      return;
+    }
+
+    const coincidencias = await apiFetch(`/reuniones/${reunionId}/disponibilidades/coincidencias`);
+    renderDetailOrg(reunion, opciones, coincidencias);
+    showView('detail-org');
+  } catch (e) {
+    if (e.status !== 401) showToast(e.message, 'danger');
+  }
+}
+
+function renderDetailOrg(reunion, opciones, coincidencias) {
+  document.getElementById('detail-org-title').textContent = reunion.titulo;
+
+  // Resumen de respuestas usando datos enriquecidos del servicio
+  const progreso = document.getElementById('detail-org-progress');
+  if (coincidencias.length > 0) {
+    const { totalParticipantes, pendientes } = coincidencias[0];
+    const respondieron = totalParticipantes - pendientes.length;
+    const pendientesNombres = pendientes.map(p => escHtml(p.nombre)).join(', ');
+    progreso.innerHTML = `
+      <div class="alert alert-secondary small py-2 mb-2">
+        <i class="bi bi-people me-1"></i>
+        <strong>${respondieron} de ${totalParticipantes}</strong> participante(s) han respondido.
+        ${pendientes.length > 0 ? `<br><span class="text-muted">Sin responder: ${pendientesNombres}</span>` : ''}
+      </div>`;
+  } else {
+    progreso.innerHTML = '<div class="alert alert-secondary small py-2 mb-2"><i class="bi bi-people me-1"></i>Ningún participante ha respondido aún.</div>';
+  }
+
+  const countMap = {};
+  const maxCount = coincidencias.length > 0 ? coincidencias[0].cantidad : 0;
+  for (const c of coincidencias) countMap[String(c.opcion._id)] = c.cantidad;
+
+  const list = document.getElementById('slots-list-org');
+  if (!opciones.length) {
+    list.innerHTML = '<p class="text-muted small">No hay opciones de horario.</p>';
+    return;
+  }
+
+  list.innerHTML = opciones.map(op => {
+    const count = countMap[String(op._id)] || 0;
+    const pct = maxCount > 0 ? Math.round((count / maxCount) * 100) : 0;
+    const isBest = coincidencias.length > 0 && String(coincidencias[0].opcion._id) === String(op._id) && count > 0;
+    return `
+      <div class="slot-option${isBest ? ' best' : ''}" id="slot-${op._id}" onclick="selectSlot('${op._id}', '${escHtml(formatDate(op.fechaHora))}')">
+        <div class="d-flex justify-content-between align-items-center mb-1">
+          <span class="small fw-semibold">${escHtml(formatDate(op.fechaHora))}${isBest ? ' <span class="badge bg-success ms-1">Mejor opción</span>' : ''}</span>
+          <span class="${count > 0 ? 'text-success' : 'text-muted'} small fw-bold">${count} disponible${count !== 1 ? 's' : ''}</span>
+        </div>
+        <div class="slot-bar"><div class="slot-bar-fill" style="width:${pct}%${!isBest ? ';background:#adb5bd' : ''}"></div></div>
+      </div>`;
+  }).join('');
+}
+
+// ── detalle participante ──────────────────────────────────────────────────
+
+async function openMeetingPart(reunionId) {
+  currentMeetingId = reunionId;
+  try {
+    const [reunion, opciones, disponibilidades] = await Promise.all([
+      apiFetch(`/reuniones/${reunionId}`),
+      apiFetch(`/reuniones/${reunionId}/opciones`),
+      apiFetch(`/reuniones/${reunionId}/disponibilidades`),
+    ]);
+
+    currentMeetingTitle = reunion.titulo;
+
+    if (reunion.estado === 'confirmada') {
+      document.getElementById('part-confirmed-title').textContent = reunion.titulo;
+      const opConf = opciones.find(o => String(o._id) === String(reunion.opcionConfirmadaId));
+      document.getElementById('part-confirmed-date').textContent = opConf ? formatDate(opConf.fechaHora) : '';
+      showView('detail-part-confirmed');
+      return;
+    }
+
+    document.getElementById('detail-part-title').textContent = reunion.titulo;
+    document.getElementById('detail-part-org').textContent =
+      reunion.estado === 'cancelada' ? 'Esta reunión fue cancelada.' : '';
+
+    const myId = currentUser._id;
+    const myDisp = {};
+    for (const d of disponibilidades) {
+      const pid = d.participanteId?._id || d.participanteId;
+      if (String(pid) === String(myId)) {
+        myDisp[String(d.opcionHorarioId?._id || d.opcionHorarioId)] = d;
+      }
+    }
+
+    const list = document.getElementById('avail-list');
+    if (!opciones.length) {
+      list.innerHTML = '<p class="text-muted small">El organizador aún no ha agregado opciones de horario.</p>';
+      showView('detail-part');
+      return;
+    }
+
+    list.innerHTML = opciones.map(op => {
+      const disp = myDisp[String(op._id)];
+      const checked = disp ? disp.disponible : false;
+      return `
+        <div class="avail-row${checked ? ' checked' : ''}"
+             id="avail-${op._id}"
+             data-opcion="${op._id}"
+             data-disp="${disp ? disp._id : ''}"
+             onclick="toggleAvail('avail-${op._id}')">
+          <div class="check-circle">${checked ? '<i class="bi bi-check"></i>' : ''}</div>
+          <div><div class="fw-semibold small">${escHtml(formatDate(op.fechaHora))}</div></div>
+        </div>`;
+    }).join('');
+
+    showView('detail-part');
+  } catch (e) {
+    if (e.status !== 401) showToast(e.message, 'danger');
+  }
+}
+
+// ── crear reunión ─────────────────────────────────────────────────────────
+
+function resetCreateMeeting() {
+  pendingSlots = [];
+  document.getElementById('meeting-title').value = '';
+  document.getElementById('meeting-desc').value = '';
+  document.getElementById('slot-datetime').value = '';
+  document.getElementById('chipsContainer').innerHTML = '';
+  renderPendingSlots();
+  ['meeting-title', 'slot-datetime', 'emailInput'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) clearField(el);
+  });
+}
+
+function addSlot() {
+  const input = document.getElementById('slot-datetime');
+  if (!input.value) { showToast('Selecciona una fecha y hora.', 'danger'); return; }
+  const fecha = new Date(input.value);
+  const ahora = new Date();
+  const MS_1H = 60 * 60 * 1000;
+  const MS_1A = 365 * 24 * MS_1H;
+
+  if (fecha.getTime() <= ahora.getTime() + MS_1H) {
+    showToast('La fecha debe ser al menos 1 hora en el futuro.', 'danger'); return;
+  }
+  if (fecha.getTime() > ahora.getTime() + MS_1A) {
+    showToast('La fecha no puede ser mayor a 1 año en el futuro.', 'danger'); return;
+  }
+
+  const iso = fecha.toISOString();
+  if (pendingSlots.includes(iso)) { showToast('Ya agregaste ese horario.', 'warning'); return; }
+  pendingSlots.push(iso);
+  renderPendingSlots();
+  input.value = '';
+  showToast('Horario añadido.', 'success');
+}
+
+function removeSlot(iso) {
+  pendingSlots = pendingSlots.filter(s => s !== iso);
+  renderPendingSlots();
+}
+
+function renderPendingSlots() {
+  const container = document.getElementById('slotsContainer');
+  if (!pendingSlots.length) { container.innerHTML = ''; return; }
+  container.innerHTML = pendingSlots.map((iso, i) => `
+    <div class="d-flex align-items-center gap-2 mb-2 p-2 rounded border bg-light small">
+      <i class="bi bi-clock text-muted"></i>
+      <span class="flex-grow-1">${escHtml(formatDate(iso))}</span>
+      <button class="btn btn-sm btn-link text-danger p-0" onclick="removeSlot('${iso.replace(/'/g, '')}')"><i class="bi bi-x-lg"></i></button>
+    </div>`).join('');
+}
+
+function addParticipant() {
+  const input = document.getElementById('emailInput');
+  const email = input.value.trim().toLowerCase();
+  clearField(input);
+  if (!email)               { markInvalid(input, 'Escribe un correo antes de añadir.'); return; }
+  if (!validateEmail(email)) { markInvalid(input, 'Ingresa un correo electrónico válido.'); return; }
+
+  const existing = [...document.querySelectorAll('#chipsContainer .chip')].map(c => c.dataset.email);
+  if (existing.includes(email)) { showToast('Ya añadiste ese correo.', 'warning'); return; }
+
+  const span = document.createElement('span');
+  span.className = 'chip';
+  span.dataset.email = email;
+  const txt = document.createTextNode(email);
+  const rm = document.createElement('span');
+  rm.className = 'rm';
+  rm.textContent = ' ×';
+  rm.onclick = () => span.remove();
+  span.append(txt, rm);
+  document.getElementById('chipsContainer').appendChild(span);
+  input.value = '';
+  showToast(email + ' añadido.', 'success');
+}
+
+async function createMeeting() {
+  const titleEl = document.getElementById('meeting-title');
+  const descEl  = document.getElementById('meeting-desc');
+  const btn     = document.getElementById('btn-create-meeting');
+  clearField(titleEl);
+
+  if (!titleEl.value.trim()) { markInvalid(titleEl, 'El título de la reunión es requerido.'); return; }
+  markValid(titleEl);
+  if (pendingSlots.length === 0) { showToast('Agrega al menos un horario.', 'danger'); return; }
+
+  setLoading(btn, true);
+  try {
+    const reunion = await apiFetch('/reuniones', {
+      method: 'POST',
+      body: JSON.stringify({ titulo: titleEl.value.trim(), descripcion: descEl.value.trim() }),
+    });
+
+    for (const fechaHora of pendingSlots) {
+      await apiFetch(`/reuniones/${reunion._id}/opciones`, {
+        method: 'POST',
+        body: JSON.stringify({ fechaHora }),
+      });
+    }
+
+    const chips = document.querySelectorAll('#chipsContainer .chip');
+    let fallos = 0;
+    for (const chip of chips) {
+      try {
+        await apiFetch(`/reuniones/${reunion._id}/participantes`, {
+          method: 'POST',
+          body: JSON.stringify({ email: chip.dataset.email }),
+        });
+      } catch (e) {
+        fallos++;
+        showToast(`No se pudo agregar ${chip.dataset.email}: ${e.message}`, 'warning');
+      }
+    }
+
+    showToast(fallos === 0 ? 'Reunión creada. Invitaciones enviadas.' : 'Reunión creada con algunos errores.', 'success');
+    setTimeout(() => goTo('dashboard'), 500);
+  } catch (e) {
+    if (e.status !== 401) showToast(e.message, 'danger');
+  } finally {
+    setLoading(btn, false);
+  }
+}
+
+// ── disponibilidad ────────────────────────────────────────────────────────
+
+function toggleAvail(rowId) {
+  const row = document.getElementById(rowId);
+  row.classList.toggle('checked');
+  row.querySelector('.check-circle').innerHTML =
+    row.classList.contains('checked') ? '<i class="bi bi-check"></i>' : '';
+}
+
+// Envía todas las disponibilidades en un solo request (bulk endpoint)
+async function submitAvail() {
+  const rows = document.querySelectorAll('#avail-list .avail-row');
+  const btn = document.getElementById('btn-submit-avail');
+
+  const respuestas = Array.from(rows).map(row => ({
+    opcionHorarioId: row.dataset.opcion,
+    disponible: row.classList.contains('checked'),
+  }));
+
+  if (!respuestas.length) {
+    showToast('No hay opciones de horario para responder.', 'warning');
+    return;
+  }
+
+  setLoading(btn, true);
+  try {
+    await apiFetch(`/reuniones/${currentMeetingId}/disponibilidades/bulk`, {
+      method: 'PUT',
+      body: JSON.stringify({ respuestas }),
+    });
+    showToast('Disponibilidad enviada.', 'success');
+    setTimeout(() => goTo('dashboard'), 500);
+  } catch (e) {
+    if (e.status !== 401) showToast(e.message, 'danger');
+  } finally {
+    setLoading(btn, false);
+  }
+}
+
+// ── confirmar / cancelar reunión ──────────────────────────────────────────
+
+function selectSlot(opcionId, fechaLabel) {
+  document.querySelectorAll('.slot-option').forEach(s => s.classList.remove('selected'));
+  const el = document.getElementById('slot-' + opcionId);
+  if (el) el.classList.add('selected');
+  selectedOpcionId = opcionId;
+}
+
+function tryConfirm() {
+  if (!selectedOpcionId) { showToast('Selecciona un horario primero.', 'warning'); return; }
+  const el = document.getElementById('slot-' + selectedOpcionId);
+  const label = el ? el.querySelector('.fw-semibold')?.textContent?.trim() : '';
+  document.getElementById('modal-confirm-date').textContent = label;
+  openModal('confirm');
+}
+
+function openCancelModal() {
+  document.getElementById('modal-cancel-title').textContent = currentMeetingTitle || 'esta reunión';
+  openModal('cancel');
+}
+
+function openModal(id)  { document.getElementById('modal-' + id).classList.add('open'); }
+function closeModal(id) { document.getElementById('modal-' + id).classList.remove('open'); }
+
+async function confirmCancel() {
+  const btn = document.getElementById('btn-do-cancel');
+  closeModal('cancel');
+  setLoading(btn, true);
+  try {
+    await apiFetch(`/reuniones/${currentMeetingId}/cancelar`, { method: 'PUT' });
+    showToast('Reunión cancelada.', 'danger');
+    setTimeout(() => goTo('dashboard'), 600);
+  } catch (e) {
+    if (e.status !== 401) showToast(e.message, 'danger');
+  } finally {
+    setLoading(btn, false);
+  }
+}
+
+async function confirmMeeting() {
+  const btn = document.getElementById('btn-do-confirm');
+  closeModal('confirm');
+  setLoading(btn, true);
+  try {
+    await apiFetch(`/reuniones/${currentMeetingId}/confirmar`, {
+      method: 'PUT',
+      body: JSON.stringify({ opcionId: selectedOpcionId }),
+    });
+    showToast('¡Reunión confirmada!', 'success');
+    await openMeetingOrg(currentMeetingId);
+  } catch (e) {
+    if (e.status !== 401) showToast(e.message, 'danger');
+  } finally {
+    setLoading(btn, false);
+  }
+}
+
+// Envía recordatorio a participantes que no han respondido
+async function recordarPendientes() {
+  const btn = document.getElementById('btn-recordar');
+  setLoading(btn, true);
+  try {
+    const result = await apiFetch(`/reuniones/${currentMeetingId}/recordar`, { method: 'POST' });
+    showToast(result?.mensaje || 'Recordatorio enviado.', 'success');
+  } catch (e) {
+    if (e.status !== 401) showToast(e.message, 'danger');
+  } finally {
+    setLoading(btn, false);
+  }
+}
+
+// ── notificaciones ────────────────────────────────────────────────────────
+
+const iconoNotif = {
+  invitacion:   'bi-envelope-open text-success',
+  confirmacion: 'bi-check-circle text-success',
+  cancelacion:  'bi-x-circle text-danger',
+  recordatorio: 'bi-alarm text-warning',
+};
+
+async function loadNotifications() {
+  if (!currentUser) return;
+  try {
+    const notifs = await apiFetch('/notificaciones');
+    const unread = notifs.filter(n => !n.leida).length;
+    const badge = document.getElementById('notif-badge');
+    badge.textContent = unread;
+    badge.classList.toggle('d-none', unread === 0);
+
+    const countText = document.getElementById('notif-count-text');
+    if (countText) countText.textContent = `${unread} sin leer`;
+
+    const list = document.getElementById('notif-list');
+    if (!list) return;
+
+    if (!notifs.length) {
+      list.innerHTML = `
+        <div class="text-center py-5">
+          <i class="bi bi-bell-slash text-muted" style="font-size:2.5rem"></i>
+          <p class="text-muted mt-3 mb-0">No tienes notificaciones.</p>
+        </div>`;
+      return;
+    }
+
+    list.innerHTML = notifs.map(n => `
+      <div class="notif-item${n.leida ? '' : ' unread'}" data-id="${n._id}" onclick="markRead(this)">
+        <div class="d-flex gap-3 align-items-start">
+          <i class="bi ${iconoNotif[n.tipo] || 'bi-bell'} fs-5 mt-1"></i>
+          <div>
+            <div class="fw-semibold small">${escHtml(n.tipo.charAt(0).toUpperCase() + n.tipo.slice(1))}</div>
+            <div class="text-muted small">${escHtml(n.mensaje)}</div>
+            <div class="text-muted" style="font-size:12px">${formatDate(n.createdAt)}</div>
+          </div>
+        </div>
+      </div>`).join('');
+  } catch (e) {
+    if (e.status !== 401) showToast(e.message, 'danger');
+  }
+}
+
+async function markRead(el) {
+  if (!el.classList.contains('unread')) return;
+  const id = el.dataset.id;
+  try {
+    await apiFetch(`/notificaciones/${id}/leida`, { method: 'PUT' });
+    el.classList.remove('unread');
+    await loadNotifications();
+  } catch {}
+}
+
+// Marca todas leídas en un solo request al endpoint dedicado
+async function markAllRead() {
+  const btn = document.getElementById('btn-mark-all');
+  setLoading(btn, true);
+  try {
+    await apiFetch('/notificaciones/leer-todas', { method: 'PUT' });
+    await loadNotifications();
+    showToast('Todas las notificaciones marcadas como leídas.', 'secondary');
+  } catch (e) {
+    if (e.status !== 401) showToast(e.message, 'danger');
+  } finally {
+    setLoading(btn, false);
+  }
+}
+
+// ── inicio ────────────────────────────────────────────────────────────────
+
+(async function init() {
+  if (token) {
+    try {
+      currentUser = await apiFetch('/auth/perfil');
+      localStorage.setItem('sm_user', JSON.stringify(currentUser));
+      updateNav();
+      updateGreetings();
+      await goTo('dashboard');
+      await loadNotifications();
+    } catch {
+      // apiFetch ya maneja el 401: redirige al login y limpia sesión
+      if (!currentUser) showView('landing');
+    }
+  } else {
+    updateNav();
+    showView('landing');
+  }
+})();
+</script>
+</body>
+</html>
