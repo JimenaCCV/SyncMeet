@@ -14,11 +14,13 @@ const notificacionesRoutes = require('./routes/notificaciones.routes');
 
 const app = express();
 
-const allowedOrigins = new Set([
-  FRONTEND_URL,
-  FRONTEND_URL.replace('localhost', '127.0.0.1'),
-  FRONTEND_URL.replace('127.0.0.1', 'localhost'),
-]);
+const allowedOrigins = new Set(
+  [
+    FRONTEND_URL,
+    FRONTEND_URL.replace('localhost', '127.0.0.1'),
+    FRONTEND_URL.replace('127.0.0.1', 'localhost'),
+  ].filter(Boolean)
+);
 
 app.use(cors({
   origin: (origin, callback) => {
