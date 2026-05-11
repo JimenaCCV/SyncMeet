@@ -156,6 +156,7 @@
       <div id="meetings-list">
         <div class="text-muted small"><span class="spinner-border spinner-border-sm me-2"></span>Cargando reuniones...</div>
       </div>
+      <div id="meetings-pagination" class="d-flex justify-content-center align-items-center gap-2 mt-3"></div>
     </div>
   </div>
 </div>
@@ -349,6 +350,8 @@ let selectedOpcionId = null;
 let pendingSlots = [];
 let allMeetings = [];
 let currentFilter = 'all';
+let dashPage = 1;
+const ITEMS_PER_PAGE = 8;
 
 // ── utilidades ────────────────────────────────────────────────────────────
 
@@ -575,7 +578,7 @@ async function loadDashboard() {
   const list = document.getElementById('meetings-list');
   list.innerHTML = '<div class="text-muted small"><span class="spinner-border spinner-border-sm me-2"></span>Cargando reuniones...</div>';
   try {
-    allMeetings = (await apiFetch('/reuniones')).reuniones || [];
+    allMeetings = (await apiFetch('/reuniones?limit=100')).reuniones || [];
     updateGreetings();
     filterMeetings(currentFilter);
   } catch (e) {
@@ -587,8 +590,8 @@ async function loadDashboard() {
 
 function filterMeetings(filter) {
   currentFilter = filter;
+  dashPage = 1;
 
-  // Actualizar estilos de botones de filtro
   ['all', 'organizador', 'participante'].forEach(f => {
     const btn = document.getElementById('filter-' + f);
     if (!btn) return;
@@ -606,13 +609,13 @@ function filterMeetings(filter) {
 
 function renderMeetings(reuniones) {
   const list = document.getElementById('meetings-list');
+  const pag  = document.getElementById('meetings-pagination');
 
   if (!reuniones.length) {
-    const esOrg = currentFilter === 'organizador';
     const esPart = currentFilter === 'participante';
     const msg = currentFilter === 'all'
       ? '¡Aún no tienes reuniones!'
-      : esOrg ? 'No estás organizando ninguna reunión aún.'
+      : currentFilter === 'organizador' ? 'No estás organizando ninguna reunión aún.'
       : 'No tienes invitaciones pendientes.';
     list.innerHTML = `
       <div class="text-center py-5">
@@ -620,10 +623,18 @@ function renderMeetings(reuniones) {
         <p class="text-muted mt-3 mb-2">${escHtml(msg)}</p>
         ${!esPart ? '<button class="btn btn-success btn-sm" onclick="goTo(\'create-meeting\')"><i class="bi bi-plus me-1"></i>Crear reunión</button>' : ''}
       </div>`;
+    pag.innerHTML = '';
     return;
   }
 
-  list.innerHTML = reuniones.map(r => {
+  const totalPages = Math.ceil(reuniones.length / ITEMS_PER_PAGE);
+  if (dashPage > totalPages) dashPage = totalPages;
+  const start = (dashPage - 1) * ITEMS_PER_PAGE;
+  const pagina = reuniones.slice(start, start + ITEMS_PER_PAGE);
+
+  renderPagination(totalPages, reuniones.length);
+
+  list.innerHTML = pagina.map(r => {
     const rolBadge = r.miRol === 'organizador'
       ? '<span class="badge small" style="background:rgba(91,79,207,.12);color:#5b4fcf;border:1px solid rgba(91,79,207,.3)">Organizador</span>'
       : '<span class="badge small bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-25">Invitado</span>';
@@ -657,6 +668,39 @@ function renderMeetings(reuniones) {
         </div>
       </div>`;
   }).join('');
+}
+
+function renderPagination(totalPages, total) {
+  const pag = document.getElementById('meetings-pagination');
+  if (totalPages <= 1) { pag.innerHTML = ''; return; }
+
+  const prev = dashPage > 1
+    ? `<button class="btn btn-sm btn-outline-secondary" onclick="goPage(${dashPage - 1})"><i class="bi bi-chevron-left"></i></button>`
+    : `<button class="btn btn-sm btn-outline-secondary" disabled><i class="bi bi-chevron-left"></i></button>`;
+
+  const next = dashPage < totalPages
+    ? `<button class="btn btn-sm btn-outline-secondary" onclick="goPage(${dashPage + 1})"><i class="bi bi-chevron-right"></i></button>`
+    : `<button class="btn btn-sm btn-outline-secondary" disabled><i class="bi bi-chevron-right"></i></button>`;
+
+  const pages = [];
+  for (let i = 1; i <= totalPages; i++) {
+    if (i === 1 || i === totalPages || Math.abs(i - dashPage) <= 1) {
+      pages.push(`<button class="btn btn-sm ${i === dashPage ? 'btn-success' : 'btn-outline-secondary'}" onclick="goPage(${i})">${i}</button>`);
+    } else if (pages[pages.length - 1] !== '…') {
+      pages.push('…');
+    }
+  }
+
+  pag.innerHTML = prev + pages.join('') + next;
+}
+
+function goPage(n) {
+  dashPage = n;
+  const filtered = currentFilter === 'all'
+    ? allMeetings
+    : allMeetings.filter(r => r.miRol === currentFilter);
+  renderMeetings(filtered);
+  document.getElementById('meetings-list').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 // ── detalle organizador ───────────────────────────────────────────────────
