@@ -1,8 +1,6 @@
 const notificacionRepo = require('../repositories/notificacion.repository');
 const { ok, err } = require('../utils/respuesta');
 
-const TIPOS_VALIDOS = ['invitacion', 'confirmacion', 'cancelacion', 'recordatorio'];
-
 // GET /api/notificaciones?leida=false&tipo=invitacion&page=1&limit=20
 const obtenerNotificaciones = async (req, res, next) => {
   try {
@@ -11,12 +9,7 @@ const obtenerNotificaciones = async (req, res, next) => {
     const filter = { usuarioId: req.usuarioId };
 
     if (leida !== undefined) filter.leida = leida === 'true';
-    if (tipo) {
-      if (!TIPOS_VALIDOS.includes(tipo)) {
-        return res.status(400).json(err('Tipo de notificación inválido', 'VALIDATION_ERROR'));
-      }
-      filter.tipo = tipo;
-    }
+    if (tipo) filter.tipo = tipo;
 
     const pageNum = Math.max(1, parseInt(page) || 1);
     const limitNum = Math.min(100, Math.max(1, parseInt(limit) || 20));

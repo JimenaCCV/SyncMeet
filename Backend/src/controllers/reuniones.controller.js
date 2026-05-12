@@ -6,14 +6,9 @@ const { crearNotificacion, notificarParticipantes } = require('../services/notif
 const { enviarConfirmacion, enviarCancelacion, enviarRecordatorio } = require('../services/correo.service');
 const { ok, err } = require('../utils/respuesta');
 
-const ESTADOS_VALIDOS = ['pendiente', 'confirmada', 'cancelada'];
-
 const crearReunion = async (req, res, next) => {
   try {
     const { titulo, descripcion } = req.body;
-    if (!titulo || !titulo.trim()) {
-      return res.status(400).json(err('El título es obligatorio', 'VALIDATION_ERROR'));
-    }
 
     const reunion = await reunionRepo.create({
       titulo: titulo.trim(),
@@ -38,10 +33,6 @@ const crearReunion = async (req, res, next) => {
 const obtenerReuniones = async (req, res, next) => {
   try {
     const { estado, titulo, page, limit } = req.query;
-
-    if (estado && !ESTADOS_VALIDOS.includes(estado)) {
-      return res.status(400).json(err('Estado inválido', 'VALIDATION_ERROR'));
-    }
 
     const pageNum = Math.max(1, parseInt(page) || 1);
     const limitNum = Math.min(100, Math.max(1, parseInt(limit) || 10));
@@ -83,9 +74,6 @@ const obtenerReunion = async (req, res, next) => {
 const editarReunion = async (req, res, next) => {
   try {
     const { titulo, descripcion } = req.body;
-    if (titulo !== undefined && !titulo.trim()) {
-      return res.status(400).json(err('El título no puede estar vacío', 'VALIDATION_ERROR'));
-    }
 
     const reunion = await reunionRepo.findById(req.params.id);
     if (!reunion) {
@@ -109,9 +97,6 @@ const editarReunion = async (req, res, next) => {
 const confirmarReunion = async (req, res, next) => {
   try {
     const { opcionId } = req.body;
-    if (!opcionId) {
-      return res.status(400).json(err('Se requiere opcionId', 'VALIDATION_ERROR'));
-    }
 
     const reunion = await reunionRepo.findById(req.params.id);
     if (!reunion) {

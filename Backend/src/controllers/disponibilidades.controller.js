@@ -8,13 +8,6 @@ const registrarDisponibilidad = async (req, res, next) => {
     const { opcionHorarioId, disponible } = req.body;
     const { reunionId } = req.params;
 
-    if (!opcionHorarioId || disponible === undefined) {
-      return res.status(400).json(err('opcionHorarioId y disponible son obligatorios', 'VALIDATION_ERROR'));
-    }
-    if (typeof disponible !== 'boolean') {
-      return res.status(400).json(err('disponible debe ser true o false', 'VALIDATION_ERROR'));
-    }
-
     const opcion = await opcionRepo.findOne({ _id: opcionHorarioId, reunionId });
     if (!opcion) {
       return res.status(404).json(err('Opción de horario no pertenece a esta reunión', 'NOT_FOUND'));
@@ -41,13 +34,6 @@ const actualizarDisponibilidad = async (req, res, next) => {
     const { disponible } = req.body;
     const { reunionId, disponibilidadId } = req.params;
 
-    if (disponible === undefined) {
-      return res.status(400).json(err('disponible es obligatorio', 'VALIDATION_ERROR'));
-    }
-    if (typeof disponible !== 'boolean') {
-      return res.status(400).json(err('disponible debe ser true o false', 'VALIDATION_ERROR'));
-    }
-
     const disp = await disponibilidadRepo.findOne({
       _id: disponibilidadId,
       reunionId,
@@ -71,19 +57,6 @@ const registrarDisponibilidadBulk = async (req, res, next) => {
   try {
     const { respuestas } = req.body;
     const { reunionId } = req.params;
-
-    if (!Array.isArray(respuestas) || respuestas.length === 0) {
-      return res.status(400).json(err('respuestas debe ser un array no vacío', 'VALIDATION_ERROR'));
-    }
-
-    for (const r of respuestas) {
-      if (!r.opcionHorarioId) {
-        return res.status(400).json(err('Cada respuesta requiere opcionHorarioId', 'VALIDATION_ERROR'));
-      }
-      if (typeof r.disponible !== 'boolean') {
-        return res.status(400).json(err('disponible debe ser true o false en cada respuesta', 'VALIDATION_ERROR'));
-      }
-    }
 
     const results = [];
     for (const { opcionHorarioId, disponible } of respuestas) {

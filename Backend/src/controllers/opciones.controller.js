@@ -12,15 +12,7 @@ const agregarOpcion = async (req, res, next) => {
     const { fechaHora } = req.body;
     const { reunionId } = req.params;
 
-    if (!fechaHora) {
-      return res.status(400).json(err('fechaHora es obligatoria', 'VALIDATION_ERROR'));
-    }
-
     const fecha = new Date(fechaHora);
-    if (isNaN(fecha.getTime())) {
-      return res.status(400).json(err('fechaHora no es una fecha válida', 'VALIDATION_ERROR'));
-    }
-
     const ahora = new Date();
     if (fecha.getTime() <= ahora.getTime() + MS_1_HORA) {
       return res.status(400).json(err('La fecha debe ser al menos 1 hora en el futuro', 'VALIDATION_ERROR'));

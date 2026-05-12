@@ -4,9 +4,11 @@ const { agregarOpcion, listarOpciones, eliminarOpcion } = require('../controller
 const requireAuth = require('../middlewares/requireAuth');
 const requireOrganizador = require('../middlewares/requireOrganizador');
 const requireParticipante = require('../middlewares/requireParticipante');
+const validar = require('../middlewares/validar');
+const { agregarRules, opcionIdParam } = require('../validators/opciones.validators');
 
-router.post('/', requireAuth, requireOrganizador, agregarOpcion);
+router.post('/', requireAuth, requireOrganizador, agregarRules, validar, agregarOpcion);
 router.get('/', requireAuth, requireParticipante, listarOpciones);
-router.delete('/:opcionId', requireAuth, requireOrganizador, eliminarOpcion);
+router.delete('/:opcionId', requireAuth, requireOrganizador, [opcionIdParam], validar, eliminarOpcion);
 
 module.exports = router;

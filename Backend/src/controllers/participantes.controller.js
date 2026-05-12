@@ -4,16 +4,11 @@ const participanteRepo = require('../repositories/participante.repository');
 const { crearNotificacion } = require('../services/notificacion.service');
 const { enviarInvitacion } = require('../services/correo.service');
 const { ok, err } = require('../utils/respuesta');
-const { esEmailValido } = require('../utils/validaciones');
 
 const agregarParticipante = async (req, res, next) => {
   try {
     const { email } = req.body;
     const { reunionId } = req.params;
-
-    if (!email || !esEmailValido(email)) {
-      return res.status(400).json(err('Email válido requerido', 'VALIDATION_ERROR'));
-    }
 
     const reunion = await reunionRepo.findById(reunionId);
     if (!reunion) {
