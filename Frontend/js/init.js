@@ -1,4 +1,7 @@
 (async function init() {
+  currentUser = null;
+  localStorage.removeItem('sm_user');
+
   try {
     currentUser = await apiFetch('/auth/perfil');
     localStorage.setItem('sm_user', JSON.stringify(currentUser));
@@ -7,6 +10,8 @@
     await goTo('dashboard');
     await loadNotifications();
   } catch {
-    if (!currentUser) showView('landing');
+    showView('landing');
+  } finally {
+    window._appReady = true;
   }
 })();

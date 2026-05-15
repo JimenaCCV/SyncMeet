@@ -20,7 +20,9 @@ async function apiFetch(path, opts = {}) {
     localStorage.removeItem('sm_user');
     updateNav();
     showView('login');
-    if (wasLoggedIn) showToast('Tu sesión expiró. Por favor inicia sesión nuevamente.', 'warning');
+    if (wasLoggedIn && window._appReady) {
+      showToast('Tu sesión expiró. Por favor inicia sesión nuevamente.', 'warning');
+    }
     throw { status: 401, message: json.error || 'Sesión expirada' };
   }
 
