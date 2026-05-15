@@ -1,6 +1,7 @@
 const usuarioRepo = require('../repositories/usuario.repository');
 const reunionRepo = require('../repositories/reunion.repository');
 const participanteRepo = require('../repositories/participante.repository');
+const disponibilidadRepo = require('../repositories/disponibilidad.repository');
 const { crearNotificacion } = require('../services/notificacion.service');
 const { enviarInvitacion } = require('../services/correo.service');
 const { ok, err } = require('../utils/respuesta');
@@ -13,6 +14,9 @@ const agregarParticipante = async (req, res, next) => {
     const reunion = await reunionRepo.findById(reunionId);
     if (!reunion) {
       return res.status(404).json(err('Reunión no encontrada', 'NOT_FOUND'));
+    }
+    if (reunion.estado !== 'pendiente') {
+      return res.status(400).json(err(`No se pueden agregar participantes a una reunión ${reunion.estado}`, 'INVALID_STATE'));
     }
 
     const usuario = await usuarioRepo.findByEmail(email.toLowerCase());
@@ -82,6 +86,7 @@ const eliminarParticipante = async (req, res, next) => {
       return res.status(400).json(err('No se puede eliminar al organizador', 'INVALID_STATE'));
     }
 
+    await disponibilidadRepo.deleteMany({ reunionId, participanteId: usuarioId });
     await participanteRepo.deleteById(participante._id);
     res.json(ok({ mensaje: 'Participante eliminado' }));
   } catch (error) {

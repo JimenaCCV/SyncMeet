@@ -159,6 +159,7 @@ const cancelarReunion = async (req, res, next) => {
     if (!reunion) {
       return res.status(404).json(err('Reunión no encontrada', 'NOT_FOUND'));
     }
+    // Se permite cancelar reuniones en estado 'pendiente' o 'confirmada'
     if (reunion.estado === 'cancelada') {
       return res.status(400).json(err('La reunión ya está cancelada', 'INVALID_STATE'));
     }
@@ -201,6 +202,8 @@ const recordarParticipantes = async (req, res, next) => {
 
     const participantes = await participanteRepo.findWithPopulate({ reunionId: reunion._id }, 'usuarioId');
 
+    // DECISIÓN DE DISEÑO: se considera que un participante "respondió" si registró
+    // disponibilidad para al menos una opción de la reunión.
     const dispTodas = await disponibilidadRepo.find({ reunionId: reunion._id });
     const respondieronIds = new Set(dispTodas.map(d => String(d.participanteId)));
 
@@ -242,14 +245,10 @@ const eliminarReunion = async (req, res, next) => {
       return res.status(403).json(err('Solo el organizador puede eliminar la reunión', 'FORBIDDEN'));
     }
 
-    const opciones = await opcionRepo.find({ reunionId: reunion._id });
-    const opcionIds = opciones.map(o => o._id);
-    await disponibilidadRepo.deleteMany({ opcionHorarioId: { $in: opcionIds } });
-    await opcionRepo.deleteMany({ reunionId: reunion._id });
-    await participanteRepo.deleteMany({ reunionId: reunion._id });
-    await reunionRepo.findByIdAndDelete(reunion._id);
+    reunion.eliminada = true;
+    await reunionRepo.save(reunion);
 
-    res.json(ok({ mensaje: 'Reunión eliminada correctamente' }));
+    res.json(ok({ mensaje: 'Reunión eliminada del dashboard' }));
   } catch (error) {
     next(error);
   }

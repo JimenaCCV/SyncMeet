@@ -58,30 +58,34 @@ const registrarDisponibilidadBulk = async (req, res, next) => {
     const { respuestas } = req.body;
     const { reunionId } = req.params;
 
-    const results = [];
-    for (const { opcionHorarioId, disponible } of respuestas) {
-      const opcion = await opcionRepo.findOne({ _id: opcionHorarioId, reunionId });
-      if (!opcion) continue;
+    const opcionIds = respuestas.map(r => r.opcionHorarioId);
+    const opcionesValidas = await opcionRepo.find({ reunionId, _id: { $in: opcionIds } });
+    const opcionesValidasSet = new Set(opcionesValidas.map(o => String(o._id)));
 
-      let disp = await disponibilidadRepo.findOne({
-        reunionId,
-        participanteId: req.usuarioId,
-        opcionHorarioId,
-      });
+    const respuestasFiltradas = respuestas.filter(r =>
+      opcionesValidasSet.has(String(r.opcionHorarioId))
+    );
 
-      if (disp) {
-        disp.disponible = disponible;
-        await disponibilidadRepo.save(disp);
-      } else {
-        disp = await disponibilidadRepo.create({
-          reunionId,
-          participanteId: req.usuarioId,
-          opcionHorarioId,
-          disponible,
-        });
-      }
-      results.push(disp);
+    if (respuestasFiltradas.length === 0) {
+      return res.json(ok([]));
     }
+
+    const Disponibilidad = require('../models/Disponibilidad');
+    const operaciones = respuestasFiltradas.map(({ opcionHorarioId, disponible }) => ({
+      updateOne: {
+        filter: { reunionId, participanteId: req.usuarioId, opcionHorarioId },
+        update: { $set: { disponible } },
+        upsert: true,
+      },
+    }));
+
+    await Disponibilidad.bulkWrite(operaciones, { ordered: false });
+
+    const results = await disponibilidadRepo.find({
+      reunionId,
+      participanteId: req.usuarioId,
+      opcionHorarioId: { $in: respuestasFiltradas.map(r => r.opcionHorarioId) },
+    });
 
     res.json(ok(results));
   } catch (error) {

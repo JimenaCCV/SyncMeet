@@ -51,4 +51,8 @@ const confirmarRules = [
     .isMongoId().withMessage('opcionId inválido'),
 ];
 
-module.exports = { crearRules, listarRules, editarRules, confirmarRules, idParam };
+const cancelarRules = [idParam];
+const recordarRules = [idParam];
+const eliminarRules = [idParam];
+
+module.exports = { crearRules, listarRules, editarRules, confirmarRules, cancelarRules, recordarRules, eliminarRules, idParam };

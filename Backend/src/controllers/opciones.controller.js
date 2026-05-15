@@ -1,7 +1,8 @@
 const reunionRepo = require('../repositories/reunion.repository');
 const opcionRepo = require('../repositories/opcion.repository');
 const disponibilidadRepo = require('../repositories/disponibilidad.repository');
-const { crearNotificacion } = require('../services/notificacion.service');
+const participanteRepo = require('../repositories/participante.repository');
+const { crearNotificacion, notificarParticipantes } = require('../services/notificacion.service');
 const { ok, err } = require('../utils/respuesta');
 
 const MS_1_HORA = 60 * 60 * 1000;
@@ -35,6 +36,24 @@ const agregarOpcion = async (req, res, next) => {
     }
 
     const opcion = await opcionRepo.create({ reunionId, fechaHora: fecha });
+
+    const participantes = await participanteRepo.find({ reunionId });
+    const ids = participantes
+      .filter(p => String(p.usuarioId) !== String(req.usuarioId))
+      .map(p => p.usuarioId);
+
+    if (ids.length > 0) {
+      const fechaFormateada = new Date(fecha).toLocaleString('es-MX', {
+        dateStyle: 'long', timeStyle: 'short',
+      });
+      notificarParticipantes(
+        ids,
+        'recordatorio',
+        `Se agregó una nueva opción de horario (${fechaFormateada}) a la reunión "${reunion.titulo}". Por favor responde tu disponibilidad.`,
+        reunionId,
+      ).catch(e => console.error('[notif] nueva opción error:', e));
+    }
+
     res.status(201).json(ok(opcion));
   } catch (error) {
     next(error);

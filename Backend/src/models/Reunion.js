@@ -15,6 +15,7 @@ const reunionSchema = new mongoose.Schema({
   estado: { type: String, enum: ['pendiente', 'confirmada', 'cancelada'], default: 'pendiente' },
   opcionConfirmadaId: { type: mongoose.Schema.Types.ObjectId, ref: 'OpcionHorario', default: null },
   historialEstados: { type: [historialEstadoSchema], default: [] },
+  eliminada: { type: Boolean, default: false },
 }, { timestamps: true });
 
 // Registra cada transición de estado en el historial embebido
@@ -23,6 +24,26 @@ reunionSchema.pre('save', function (next) {
     this.historialEstados.push({ estado: this.estado, fecha: new Date() });
   }
   next();
+});
+
+// Excluye reuniones eliminadas de todos los queries find* automáticamente
+reunionSchema.pre(/^find/, function (next) {
+  this.where({ eliminada: false });
+  next();
+});
+
+// Archiva las disponibilidades asociadas cuando la reunión se marca como eliminada
+reunionSchema.post('save', async function (doc) {
+  if (!doc.eliminada) return;
+  try {
+    const Disponibilidad = require('./Disponibilidad');
+    await Disponibilidad.updateMany(
+      { reunionId: doc._id },
+      { $set: { archivada: true } }
+    );
+  } catch (error) {
+    console.error('[hook] Error archivando disponibilidades:', error);
+  }
 });
 
 module.exports = mongoose.model('Reunion', reunionSchema);

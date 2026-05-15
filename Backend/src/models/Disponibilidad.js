@@ -5,6 +5,7 @@ const disponibilidadSchema = new mongoose.Schema({
   participanteId: { type: mongoose.Schema.Types.ObjectId, ref: 'Usuario', required: true },
   opcionHorarioId: { type: mongoose.Schema.Types.ObjectId, ref: 'OpcionHorario', required: true },
   disponible: { type: Boolean, required: true },
+  archivada: { type: Boolean, default: false },
 }, { timestamps: true });
 
 disponibilidadSchema.index({ reunionId: 1, participanteId: 1, opcionHorarioId: 1 }, { unique: true });

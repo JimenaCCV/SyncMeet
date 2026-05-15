@@ -1,10 +1,10 @@
-const ParticipanteReunion = require('../models/ParticipanteReunion');
+const participanteRepo = require('../repositories/participante.repository');
 const { err } = require('../utils/respuesta');
 
 const requireParticipante = async (req, res, next) => {
   try {
     const reunionId = req.params.id || req.params.reunionId;
-    const participante = await ParticipanteReunion.findOne({
+    const participante = await participanteRepo.findOne({
       reunionId,
       usuarioId: req.usuarioId,
     });
