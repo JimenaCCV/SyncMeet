@@ -4,10 +4,12 @@ const usuarioRepo = require('../repositories/usuario.repository');
 const { JWT_SECRET, JWT_EXPIRES_IN } = require('../config/env');
 const { ok, err } = require('../utils/respuesta');
 
+const isProduction = process.env.NODE_ENV === 'production';
+
 const COOKIE_OPTIONS = {
   httpOnly: true,
-  sameSite: 'lax',
-  secure: process.env.NODE_ENV === 'production',
+  sameSite: isProduction ? 'none' : 'lax',
+  secure: isProduction,
   maxAge: 7 * 24 * 60 * 60 * 1000,
 };
 
@@ -54,7 +56,7 @@ const login = async (req, res, next) => {
 
 const logout = async (req, res, next) => {
   try {
-    res.clearCookie('token', { httpOnly: true, sameSite: 'lax', secure: process.env.NODE_ENV === 'production' });
+    res.clearCookie('token', { httpOnly: true, sameSite: isProduction ? 'none' : 'lax', secure: isProduction });
     res.json(ok({ mensaje: 'Sesión cerrada' }));
   } catch (error) {
     next(error);

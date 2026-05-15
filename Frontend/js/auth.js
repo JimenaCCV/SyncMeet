@@ -52,7 +52,7 @@ async function login() {
     updateGreetings();
     await goTo('dashboard');
     await loadNotifications();
-    showToast('Sesión iniciada.', 'success');
+    if (currentUser) showToast('Sesión iniciada.', 'success');
   } catch (e) {
     if (e.status !== 401) showToast(e.message, 'danger');
   } finally {
