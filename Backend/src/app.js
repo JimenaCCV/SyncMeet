@@ -37,6 +37,16 @@ app.get('/debug-env', (req, res) => {
   });
 });
 
+app.get('/debug-cookie', (req, res) => {
+  res.cookie('test', '1', {
+    httpOnly: true,
+    sameSite: 'none',
+    secure: true,
+    maxAge: 60000,
+  });
+  res.json({ mensaje: 'revisa el Set-Cookie en los headers' });
+});
+
 const allowedOrigins = new Set(
   [
     FRONTEND_URL,
