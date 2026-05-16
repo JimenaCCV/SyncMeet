@@ -26,9 +26,10 @@ reunionSchema.pre('save', function (next) {
   next();
 });
 
-// Excluye reuniones eliminadas de todos los queries find* automáticamente
+// Excluye reuniones eliminadas de todos los queries find* automáticamente.
+// Usa $ne: true para incluir también documentos que no tienen el campo (datos previos a la migración).
 reunionSchema.pre(/^find/, function (next) {
-  this.where({ eliminada: false });
+  this.where({ eliminada: { $ne: true } });
   next();
 });
 
