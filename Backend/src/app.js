@@ -30,6 +30,13 @@ app.get('/health', (req, res) => {
   });
 });
 
+app.get('/debug-env', (req, res) => {
+  res.json({
+    NODE_ENV: process.env.NODE_ENV,
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+  });
+});
+
 const allowedOrigins = new Set(
   [
     FRONTEND_URL,
