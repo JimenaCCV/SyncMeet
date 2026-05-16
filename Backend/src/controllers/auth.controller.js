@@ -4,14 +4,10 @@ const usuarioRepo = require('../repositories/usuario.repository');
 const { JWT_SECRET, JWT_EXPIRES_IN } = require('../config/env');
 const { ok, err } = require('../utils/respuesta');
 
-// COOKIE_SECURE=true debe estar seteado en Railway (producción cross-origin)
-// En desarrollo local con backend local no es necesario (same-site)
-const secureCookies = process.env.COOKIE_SECURE === 'true';
-
 const COOKIE_OPTIONS = {
   httpOnly: true,
-  sameSite: secureCookies ? 'none' : 'lax',
-  secure: secureCookies,
+  sameSite: 'none',
+  secure: true,
   maxAge: 7 * 24 * 60 * 60 * 1000,
 };
 
@@ -58,7 +54,7 @@ const login = async (req, res, next) => {
 
 const logout = async (req, res, next) => {
   try {
-    res.clearCookie('token', { httpOnly: true, sameSite: secureCookies ? 'none' : 'lax', secure: secureCookies });
+    res.clearCookie('token', { httpOnly: true, sameSite: 'none', secure: true });
     res.json(ok({ mensaje: 'Sesión cerrada' }));
   } catch (error) {
     next(error);
